@@ -74,7 +74,17 @@ firewall rules to restrict RPC/ZMQ inbound sources.
 
 ## 3. What The Menu Asks For
 
-Menu option `1` is the recommended one-pass flow.
+Menu option `1` is the recommended beginner mode. Menu option `2` is the
+advanced one-pass flow for full customization.
+
+From a beginner perspective: if the script detects Fractald and RPC/ZMQ checks
+pass, most later steps can keep their defaults. When detection succeeds,
+beginner mode usually asks only for the RPC password and final deployment
+approval. If detection fails, the main manual inputs in advanced mode are the
+container-visible Fractald RPC/ZMQ URLs and RPC username/password. See the
+[beginner difficulty guide](BEGINNER.en.md) for the shorter explanation.
+
+Advanced mode asks for or confirms the values below.
 
 Environment and resources:
 

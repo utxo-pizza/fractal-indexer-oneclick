@@ -33,6 +33,7 @@ fi
 
 DOCKER_COMPOSE=()
 UI_LANG=""
+OFFICIAL_DEPLOY_LOCK_DIR=""
 
 CFG_RPC_URL=""
 CFG_ZMQ_BLOCK=""
@@ -126,6 +127,11 @@ main() {
       ;;
     --doctor)
       readiness_check
+      return 0
+      ;;
+    --beginner|--beginner-mode|--simple)
+      select_language
+      beginner_deployment
       return 0
       ;;
     --health)
@@ -223,6 +229,7 @@ Fractal Indexer 交互式部署菜单
   bash scripts/deploy-menu.sh --validate-rpc
   bash scripts/deploy-menu.sh --validate-statehash
   bash scripts/deploy-menu.sh --doctor
+  bash scripts/deploy-menu.sh --beginner
   bash scripts/deploy-menu.sh --self-test
   bash scripts/deploy-menu.sh --sync-official
   bash scripts/deploy-menu.sh --official-status
@@ -248,6 +255,7 @@ Fractal Indexer 交互式部署菜单
   - 中英语言选择
   - 识别 Linux 环境和机器资源
   - 自动识别本机 Fractald 节点配置
+  - 极简小白模式：自动诊断 Fractald，尽量只确认 RPC 密码和部署计划
   - 可选自动安装缺失运行依赖
   - 生成默认一条路部署可用性诊断
   - 自动拉取/更新官方 fractal-indexer-deploy 部署包
@@ -273,6 +281,7 @@ Usage:
   bash scripts/deploy-menu.sh --validate-rpc
   bash scripts/deploy-menu.sh --validate-statehash
   bash scripts/deploy-menu.sh --doctor
+  bash scripts/deploy-menu.sh --beginner
   bash scripts/deploy-menu.sh --self-test
   bash scripts/deploy-menu.sh --sync-official
   bash scripts/deploy-menu.sh --official-status
@@ -298,6 +307,7 @@ The interactive menu can:
   - select English or Chinese
   - detect Linux environment and machine resources
   - auto-detect local Fractald node configuration
+  - beginner mode: diagnose Fractald automatically and usually ask only for RPC password plus final confirmation
   - optionally install missing runtime dependencies
   - generate a default one-pass deployment readiness report
   - fetch/update the official fractal-indexer-deploy bundle automatically
@@ -321,40 +331,42 @@ menu_loop() {
     banner
     if [[ "${UI_LANG}" == "zh" ]]; then
       cat <<EOF
-1) 一条路自动部署：一次填完配置，然后自动部署
-2) 环境识别/补依赖/资源配置
-3) 预检依赖
-4) 配置 Fractald RPC/ZMQ
-5) 验证 Fractald RPC 和快照兼容性
-6) 恢复 fractal-indexer 快照（${SNAPSHOT_HEIGHT}）
-7) 初始化并启动 fractal-indexer
-8) 初始化并启动 stake-indexer
-9) proof-publisher dry-run 配置/校验/注册准备
-10) 健康检查
-11) 查看 Docker Compose 状态
-12) 跟随日志
-13) 停止服务
-14) 切换语言
-15) 默认一条路部署诊断
+1) 极简小白模式：自动诊断 Fractald，默认部署
+2) 高级一条路部署：一次填完配置，然后自动部署
+3) 环境识别/补依赖/资源配置
+4) 预检依赖
+5) 配置 Fractald RPC/ZMQ
+6) 验证 Fractald RPC 和快照兼容性
+7) 恢复 fractal-indexer 快照（${SNAPSHOT_HEIGHT}）
+8) 初始化并启动 fractal-indexer
+9) 初始化并启动 stake-indexer
+10) proof-publisher dry-run 配置/校验/注册准备
+11) 健康检查
+12) 查看 Docker Compose 状态
+13) 跟随日志
+14) 停止服务
+15) 切换语言
+16) 默认一条路部署诊断
 0) 退出
 EOF
     else
       cat <<EOF
-1) One-pass deployment: collect config once, then deploy automatically
-2) Detect environment / install dependencies / configure resources
-3) Preflight checks
-4) Configure Fractald RPC/ZMQ
-5) Validate Fractald RPC and snapshot compatibility
-6) Restore fractal-indexer snapshot (${SNAPSHOT_HEIGHT})
-7) Initialize and start fractal-indexer
-8) Initialize and start stake-indexer
-9) proof-publisher dry-run setup / validation / registration prep
-10) Health checks
-11) Show Docker Compose status
-12) Follow logs
-13) Stop services
-14) Switch language
-15) Default one-pass deployment readiness report
+1) Beginner mode: diagnose Fractald, then deploy with safe defaults
+2) Advanced one-pass deployment: collect config once, then deploy automatically
+3) Detect environment / install dependencies / configure resources
+4) Preflight checks
+5) Configure Fractald RPC/ZMQ
+6) Validate Fractald RPC and snapshot compatibility
+7) Restore fractal-indexer snapshot (${SNAPSHOT_HEIGHT})
+8) Initialize and start fractal-indexer
+9) Initialize and start stake-indexer
+10) proof-publisher dry-run setup / validation / registration prep
+11) Health checks
+12) Show Docker Compose status
+13) Follow logs
+14) Stop services
+15) Switch language
+16) Default one-pass deployment readiness report
 0) Exit
 EOF
     fi
@@ -366,21 +378,22 @@ EOF
     fi
     local option_status=0
     case "${choice}" in
-      1) guided_deployment || option_status=$? ;;
-      2) environment_setup_menu || option_status=$? ;;
-      3) preflight || option_status=$? ;;
-      4) configure_chain || option_status=$? ;;
-      5) validate_fractald_rpc_menu || option_status=$? ;;
-      6) restore_snapshot_interactive || option_status=$? ;;
-      7) start_fractal_indexer || option_status=$? ;;
-      8) start_stake_indexer || option_status=$? ;;
-      9) proof_publisher_menu || option_status=$? ;;
-      10) health_check || option_status=$? ;;
-      11) compose_status || option_status=$? ;;
-      12) follow_logs_menu || option_status=$? ;;
-      13) stop_services_menu || option_status=$? ;;
-      14) UI_LANG=""; select_language || option_status=$? ;;
-      15) readiness_check || option_status=$? ;;
+      1) beginner_deployment || option_status=$? ;;
+      2) guided_deployment || option_status=$? ;;
+      3) environment_setup_menu || option_status=$? ;;
+      4) preflight || option_status=$? ;;
+      5) configure_chain || option_status=$? ;;
+      6) validate_fractald_rpc_menu || option_status=$? ;;
+      7) restore_snapshot_interactive || option_status=$? ;;
+      8) start_fractal_indexer || option_status=$? ;;
+      9) start_stake_indexer || option_status=$? ;;
+      10) proof_publisher_menu || option_status=$? ;;
+      11) health_check || option_status=$? ;;
+      12) compose_status || option_status=$? ;;
+      13) follow_logs_menu || option_status=$? ;;
+      14) stop_services_menu || option_status=$? ;;
+      15) UI_LANG=""; select_language || option_status=$? ;;
+      16) readiness_check || option_status=$? ;;
       0) exit 0 ;;
       *) warn_i "Unknown option: ${choice}" "未知选项：${choice}" ;;
     esac
@@ -418,8 +431,42 @@ pause() {
 
 ensure_official_deploy_bundle() {
   local mode="${1:-auto}"
-  local parent head
+  local status=0
   require_command git || return 1
+  acquire_official_deploy_lock || return 1
+  trap release_official_deploy_lock EXIT
+  trap 'release_official_deploy_lock; exit 130' INT TERM
+  ensure_official_deploy_bundle_locked "${mode}" || status=$?
+  release_official_deploy_lock
+  trap - EXIT INT TERM
+  return "${status}"
+}
+
+acquire_official_deploy_lock() {
+  local parent waited=0
+  parent="$(dirname "${DEPLOY_BUNDLE_DIR}")"
+  mkdir -p "${parent}" || return 1
+  OFFICIAL_DEPLOY_LOCK_DIR="${parent}/.fractal-indexer-deploy.lock"
+  while ! mkdir "${OFFICIAL_DEPLOY_LOCK_DIR}" 2>/dev/null; do
+    if (( waited >= 60 )); then
+      error_i "Timed out waiting for another official deploy bundle update to finish." "等待另一个官方部署包更新结束超时。"
+      return 1
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+}
+
+release_official_deploy_lock() {
+  if [[ -n "${OFFICIAL_DEPLOY_LOCK_DIR}" && -d "${OFFICIAL_DEPLOY_LOCK_DIR}" ]]; then
+    rmdir "${OFFICIAL_DEPLOY_LOCK_DIR}" 2>/dev/null || true
+  fi
+  OFFICIAL_DEPLOY_LOCK_DIR=""
+}
+
+ensure_official_deploy_bundle_locked() {
+  local mode="${1:-auto}"
+  local parent head
   parent="$(dirname "${DEPLOY_BUNDLE_DIR}")"
   if [[ -d "${DEPLOY_BUNDLE_DIR}/.git" ]]; then
     if ! is_official_repo "${DEPLOY_BUNDLE_DIR}" "${OFFICIAL_DEPLOY_REPO}"; then
@@ -459,7 +506,7 @@ sync_official_deploy_bundle() {
 
   branch="$(official_deploy_default_branch)" || return 1
   current="$(git -C "${DEPLOY_BUNDLE_DIR}" branch --show-current 2>/dev/null || true)"
-  if [[ -z "${current}" ]]; then
+  if [[ "${current}" != "${branch}" ]]; then
     if git -C "${DEPLOY_BUNDLE_DIR}" show-ref --verify --quiet "refs/heads/${branch}"; then
       git -C "${DEPLOY_BUNDLE_DIR}" checkout "${branch}" || return 1
     else
@@ -467,7 +514,7 @@ sync_official_deploy_bundle() {
     fi
   fi
 
-  git -C "${DEPLOY_BUNDLE_DIR}" pull --ff-only || return 1
+  git -C "${DEPLOY_BUNDLE_DIR}" pull --ff-only origin "${branch}" || return 1
 }
 
 official_deploy_default_branch() {
@@ -1311,6 +1358,12 @@ self_test() {
   self_test_assert_success "proof-publisher start waits for health" grep -Fq 'wait_for_url "http://127.0.0.1:8080/healthz" "${CFG_WAIT_TIMEOUT}" || return 1' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "proof-publisher health is conditional" grep -Fq 'if [[ "${proof_required}" == "true" ]]; then' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "operator registration command safely refuses before official launch" grep -Fq 'operator registration is not enabled yet' "${BASH_SOURCE[0]}" || failed=1
+  self_test_assert_success "official deploy bundle lock is cleaned on process exit" grep -Fq 'trap release_official_deploy_lock EXIT' "${BASH_SOURCE[0]}" || failed=1
+  self_test_assert_success "beginner mode CLI command is documented" grep -Fq -- '--beginner' "${BASH_SOURCE[0]}" || failed=1
+  self_test_assert_success "beginner mode is the first menu option" grep -Fq '1) Beginner mode: diagnose Fractald, then deploy with safe defaults' "${BASH_SOURCE[0]}" || failed=1
+  set_beginner_defaults
+  actual="${CFG_INSTALL_DEPS} ${CFG_CLONE_SOURCE_REPOS} ${CFG_RESOURCE_MODE} ${CFG_RESOURCE_PERCENT} ${CFG_RESTORE_SNAPSHOT} ${CFG_BACKUP_EXISTING_DATA} ${CFG_STOP_RUNNING} ${CFG_ALLOW_STAKE_WITHOUT_STATEHASH} ${CFG_PREPARE_PROOF} ${CFG_START_PROOF}"
+  self_test_assert_equal "beginner defaults are low-interaction and safe" "true false auto 70 true false true false false false" "${actual}" || failed=1
   local old_docker_cmd
   old_docker_cmd="$(declare -f docker_cmd)"
   fixture_dir="$(mktemp -d)" || return 1
@@ -1998,9 +2051,72 @@ port_has_listener() {
   return 1
 }
 
+beginner_deployment() {
+  info_i "Beginner mode starts" "极简小白模式开始"
+  collect_beginner_deployment_config || return 1
+  print_deployment_plan
+  confirm_i "Start deployment with these beginner defaults now?" "确认按这些小白默认值开始部署？" "n" || {
+    warn_i "Deployment cancelled before execution." "已在执行前取消部署。"
+    return 0
+  }
+  run_deployment_plan
+}
+
+collect_beginner_deployment_config() {
+  printf "\n"
+  info_i "Step 1/3: Automatic Fractald diagnosis" "第 1/3 步：自动诊断 Fractald"
+  set_beginner_defaults
+  detect_fractald_config true
+  if [[ "${CFG_FRACTALD_DETECTED}" != "true" ]]; then
+    error_i "Beginner mode could not auto-detect Fractald. Set FRACTALD_CONF/BITCOIN_CONF and retry, or use advanced one-pass mode. Menu option 6 validates RPC after you configure it." "极简小白模式未能自动识别 Fractald。请设置 FRACTALD_CONF/BITCOIN_CONF 后重试，或使用高级一条路。配置后可用菜单 6 验证 RPC。"
+    return 1
+  fi
+
+  CFG_RPC_PASSWORD="$(prompt_secret_i "Confirm Fractald RPC password" "确认 Fractald RPC 密码" "${CFG_RPC_PASSWORD:-}")"
+  if [[ -z "${CFG_RPC_PASSWORD}" ]]; then
+    error_i "Fractald RPC password is required for beginner mode." "极简小白模式必须有 Fractald RPC 密码。"
+    return 1
+  fi
+
+  printf "\n"
+  info_i "Step 2/3: Container RPC/ZMQ diagnosis" "第 2/3 步：容器 RPC/ZMQ 诊断"
+  if command_exists docker && docker_daemon_accessible; then
+    validate_fractald_rpc_for_deployment || return 1
+  elif command_exists docker && docker_daemon_accessible_with_sudo; then
+    validate_fractald_rpc_for_deployment || return 1
+  else
+    warn_i "Docker is not ready yet, so beginner mode will validate container RPC after installing dependencies during execution." "Docker 还未就绪，极简模式会在执行阶段安装依赖后再验证容器 RPC。"
+  fi
+
+  printf "\n"
+  info_i "Step 3/3: Review before execution" "第 3/3 步：执行前确认"
+}
+
+set_beginner_defaults() {
+  CFG_RPC_URL=""
+  CFG_ZMQ_BLOCK=""
+  CFG_ZMQ_TX=""
+  CFG_RPC_USER=""
+  CFG_RPC_PASSWORD=""
+  CFG_FRACTALD_CONF=""
+  CFG_FRACTALD_DETECTED="false"
+  CFG_FRACTALD_LOOPBACK_WARN="false"
+  CFG_INSTALL_DEPS="true"
+  CFG_CLONE_SOURCE_REPOS="false"
+  CFG_RESOURCE_MODE="auto"
+  CFG_RESOURCE_PERCENT="70"
+  CFG_RESTORE_SNAPSHOT="true"
+  CFG_BACKUP_EXISTING_DATA="false"
+  CFG_STOP_RUNNING="true"
+  CFG_WAIT_TIMEOUT="${WAIT_TIMEOUT_DEFAULT}"
+  CFG_ALLOW_STAKE_WITHOUT_STATEHASH="false"
+  CFG_PREPARE_PROOF="false"
+  CFG_START_PROOF="false"
+}
+
 guided_deployment() {
   info_i "One-pass deployment wizard starts" "一条路自动部署向导开始"
-  collect_deployment_config
+  collect_deployment_config || return 1
   print_deployment_plan
   confirm_i "Start automatic deployment now?" "确认开始自动部署？" "n" || {
     warn_i "Deployment cancelled before execution." "已在执行前取消部署。"

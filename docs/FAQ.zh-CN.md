@@ -27,8 +27,8 @@ tmux attach -t fractal-indexer-oneclick
 bash scripts/deploy-menu.sh --health
 ```
 
-如果 `fractal-indexer` 没跑但数据已经存在，用菜单选项 `7`。如果 statehash 已就绪但
-`stake-indexer` 没跑，用菜单选项 `8`。
+如果 `fractal-indexer` 没跑但数据已经存在，用菜单选项 `8`。如果 statehash 已就绪但
+`stake-indexer` 没跑，用菜单选项 `9`。
 
 ## proof-publisher 会真的广播交易吗？
 

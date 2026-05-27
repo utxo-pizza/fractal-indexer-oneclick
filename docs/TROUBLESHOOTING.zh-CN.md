@@ -16,8 +16,8 @@ bash scripts/deploy-menu.sh --health
 
 如果快照已经完成，但自动流程在启动服务前中断，可以用菜单继续：
 
-- 选项 `7`：初始化并启动 `fractal-indexer`
-- 选项 `8`：初始化并启动 `stake-indexer`
+- 选项 `8`：初始化并启动 `fractal-indexer`
+- 选项 `9`：初始化并启动 `stake-indexer`
 
 ## Fractald RPC 不通
 

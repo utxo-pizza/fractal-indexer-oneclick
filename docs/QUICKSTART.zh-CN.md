@@ -4,6 +4,8 @@
 
 开始前请先读一遍 [配置需求说明](CONFIGURATION.zh-CN.md)。如果 Fractald 的
 RPC/ZMQ 没有被 Docker 容器访问到，后续快照和索引器启动都会失败。
+如果你是第一次部署，建议先看 [小白使用难度说明](BEGINNER.zh-CN.md)，确认哪些会
+自动完成、哪些必须自己准备。
 
 ## 1. 准备不死终端
 
@@ -39,18 +41,27 @@ bash scripts/run-menu-persistent.sh
 tmux attach -t fractal-indexer-oneclick
 ```
 
-## 4. 使用一条路部署
+## 4. 使用极简小白模式
 
 选择语言，然后选择 `1`。
 
-你需要填写或确认：
+这个模式会自动诊断 Fractald，然后使用安全默认值：
 
-- 容器内可访问的 Fractald RPC URL，通常是 `http://fractald:8332`。
-- Fractald ZMQ 区块 URL，通常是 `tcp://fractald:10330`。
-- Fractald ZMQ 交易 URL，通常是 `tcp://fractald:10331`。
-- RPC 用户名和密码。
-- 是否恢复官方快照。
-- 是否准备可选的 proof-publisher dry-run 配置。
+- 自动安装缺失依赖：是。
+- 克隆源码研究：否。
+- 资源配置：`auto 70%`。
+- 恢复官方快照：是。
+- 停止冲突服务：是。
+- `stake-indexer` 必须等待 statehash：是。
+- proof-publisher：否。
+
+如果 Fractald 自动识别成功，通常只需要确认：
+
+- RPC 密码。
+- 最终部署计划。
+
+需要手动调整 RPC/ZMQ、资源、快照或 proof-publisher 时，选择菜单 `2` 使用高级一条路
+部署。
 
 不确定某一项怎么填时，先运行：
 

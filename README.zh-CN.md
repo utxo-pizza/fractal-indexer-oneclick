@@ -25,6 +25,8 @@ Fractald 节点，然后用交互式菜单部署官方 `fractal-indexer`、
 ## 前置条件
 
 完整填写说明见 [配置需求说明](docs/CONFIGURATION.zh-CN.md)。
+如果你想先判断这个项目对小白是否友好，先看
+[小白使用难度说明](docs/BEGINNER.zh-CN.md)。
 
 - Linux 服务器。
 - 已经同步好或可用的 Fractald 节点。
@@ -55,12 +57,14 @@ bash scripts/run-menu-persistent.sh
 选择语言后，使用菜单 `1`：
 
 ```text
-1) 一条路自动部署：一次填完配置，然后自动部署
+1) 极简小白模式：自动诊断 Fractald，默认部署
 ```
 
-向导会一次性收集配置，展示部署计划，恢复官方快照，启动
-`fractal-indexer`，等待 FIP-101 所需 statehash 就绪，然后启动
-`stake-indexer`。
+极简模式会自动诊断 Fractald，默认自动安装依赖、使用 `auto 70%` 资源配置、恢复
+官方快照、等待 FIP-101 所需 statehash 就绪，并默认不启动 proof-publisher。识别
+成功时，它通常只需要你确认 RPC 密码和最终部署计划。
+
+需要完整自定义时，使用菜单 `2` 高级一条路部署。
 
 ## SSH 断开后如何恢复
 
@@ -93,6 +97,9 @@ bash scripts/deploy-menu.sh
 # 非破坏性一条路部署诊断
 bash scripts/deploy-menu.sh --doctor
 
+# 直接启动极简小白模式
+bash scripts/deploy-menu.sh --beginner
+
 # 从 Docker 网络内验证 Fractald RPC
 bash scripts/deploy-menu.sh --validate-rpc
 
@@ -122,6 +129,8 @@ bash scripts/deploy-menu.sh --self-test
 
 - [中文快速开始](docs/QUICKSTART.zh-CN.md)
 - [English quick start](docs/QUICKSTART.en.md)
+- [小白使用难度说明](docs/BEGINNER.zh-CN.md)
+- [Beginner difficulty guide](docs/BEGINNER.en.md)
 - [中文配置需求说明](docs/CONFIGURATION.zh-CN.md)
 - [Configuration requirements](docs/CONFIGURATION.en.md)
 - [官方部署包更新策略](docs/OFFICIAL-UPDATES.zh-CN.md)

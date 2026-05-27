@@ -7,8 +7,8 @@
 3. 对照 [配置需求说明](CONFIGURATION.zh-CN.md) 确认容器内可访问的 RPC/ZMQ 地址。
 4. 运行 `bash scripts/deploy-menu.sh --sync-official` 拉取或更新官方部署包。
 5. 用 `scripts/run-menu-persistent.sh` 启动菜单。
-6. 先跑菜单 `15` 或 `--doctor` 做非破坏性诊断。
-7. 跑菜单 `1` 一条路部署。
+6. 先跑菜单 `16` 或 `--doctor` 做非破坏性诊断。
+7. 跑菜单 `1` 极简小白模式；需要完整自定义时跑菜单 `2` 高级一条路部署。
 8. 如果 SSH 断开，用 `tmux attach -t fractal-indexer-oneclick` 恢复。
 9. 跑 `bash scripts/deploy-menu.sh --health` 检查服务。
 

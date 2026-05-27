@@ -31,8 +31,8 @@ If the menu process already ended, run:
 bash scripts/deploy-menu.sh --health
 ```
 
-If `fractal-indexer` is not running but data exists, use menu option `7`. If
-statehash is ready and `stake-indexer` is not running, use option `8`.
+If `fractal-indexer` is not running but data exists, use menu option `8`. If
+statehash is ready and `stake-indexer` is not running, use option `9`.
 
 ## Does proof-publisher broadcast transactions?
 

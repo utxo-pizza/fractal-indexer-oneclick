@@ -9,8 +9,9 @@
 4. Run `bash scripts/deploy-menu.sh --sync-official` to fetch or update the
    official deployment bundle.
 5. Start this menu through `scripts/run-menu-persistent.sh`.
-6. Run option `15` or `--doctor` for a non-destructive readiness report.
-7. Run option `1` for one-pass deployment.
+6. Run option `16` or `--doctor` for a non-destructive readiness report.
+7. Run option `1` for beginner mode, or option `2` for the advanced one-pass
+   wizard.
 8. Reattach with `tmux attach -t fractal-indexer-oneclick` if SSH disconnects.
 9. Run `bash scripts/deploy-menu.sh --health`.
 

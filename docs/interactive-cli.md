@@ -30,6 +30,7 @@ bash scripts/deploy-menu.sh --check
 bash scripts/deploy-menu.sh --validate-rpc
 bash scripts/deploy-menu.sh --validate-statehash
 bash scripts/deploy-menu.sh --doctor
+bash scripts/deploy-menu.sh --beginner
 bash scripts/deploy-menu.sh --self-test
 bash scripts/deploy-menu.sh --health
 ```
@@ -37,8 +38,9 @@ bash scripts/deploy-menu.sh --health
 ## What The Menu Does
 
 - asks for English or Chinese on startup
-- offers a one-pass deployment wizard that collects all settings once, then runs
-  the deployment automatically after final confirmation
+- offers a beginner mode that diagnoses Fractald, applies safe defaults, and
+  usually asks only for RPC password confirmation plus final approval
+- keeps an advanced one-pass deployment wizard for full customization
 - detects OS, package manager, CPU cores, memory, free disk, Docker, and Docker
   Compose
 - detects local Fractald config when possible and pre-fills RPC/ZMQ prompts
@@ -265,21 +267,40 @@ Known startup checks:
 
 ## Expected Deployment Order
 
-Use option `1` for the normal path:
+Use option `1` for the beginner path:
 
 1. Select English or Chinese.
-2. Enter Fractald RPC/ZMQ settings and RPC credentials.
-3. Choose whether missing dependencies may be installed automatically.
-4. Choose whether optional official source repositories should be cloned for
+2. Let the script auto-detect Fractald.
+3. Confirm the Fractald RPC password.
+4. Review the plan.
+5. Confirm once, then let the script run the deployment flow automatically.
+
+Beginner mode applies these defaults:
+
+- install missing dependencies: yes
+- clone optional source repositories: no
+- resource mode: `auto` with `70%` of currently available memory
+- restore the official snapshot: yes
+- move existing data automatically: no
+- stop conflicting Compose services when needed: yes
+- require statehash readiness before `stake-indexer`: yes
+- proof-publisher: disabled
+
+Use option `2` for the advanced one-pass path when you need to adjust RPC/ZMQ,
+resources, snapshot behavior, or proof-publisher:
+
+1. Enter Fractald RPC/ZMQ settings and RPC credentials.
+2. Choose whether missing dependencies may be installed automatically.
+3. Choose whether optional official source repositories should be cloned for
    research.
-5. Choose automatic or manual Docker container memory limits.
-6. Choose whether to restore the official snapshot.
-7. Choose whether existing `fractal-indexer/data` may be moved to a timestamped
+4. Choose automatic or manual Docker container memory limits.
+5. Choose whether to restore the official snapshot.
+6. Choose whether existing `fractal-indexer/data` may be moved to a timestamped
    backup if present.
-8. Choose whether to prepare and optionally start `proof-publisher` in dry-run
+7. Choose whether to prepare and optionally start `proof-publisher` in dry-run
    mode.
-9. Review the plan.
-10. Confirm once, then let the script run the deployment flow automatically.
+8. Review the plan.
+9. Confirm once, then let the script run the deployment flow automatically.
 
 The automatic flow is:
 

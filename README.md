@@ -30,7 +30,8 @@ patched service images.
 ## Requirements
 
 See [Configuration Requirements](docs/CONFIGURATION.en.md) for the full field
-reference.
+reference. If you want to judge how beginner-friendly the flow is, start with
+the [beginner difficulty guide](docs/BEGINNER.en.md).
 
 - Linux server with an already synced or usable Fractald node.
 - Fractald RPC reachable from Docker containers.
@@ -64,12 +65,16 @@ bash scripts/run-menu-persistent.sh
 Choose language, then use menu option `1`:
 
 ```text
-1) One-pass deployment: collect config once, then deploy automatically
+1) Beginner mode: diagnose Fractald, then deploy with safe defaults
 ```
 
-The wizard collects settings once, shows a deployment plan, restores the
-official snapshot, starts `fractal-indexer`, waits for the FIP-101 statehash at
-the configured reward start height, and starts `stake-indexer`.
+Beginner mode diagnoses Fractald automatically, installs missing dependencies by
+default, uses `auto 70%` resource limits, restores the official snapshot, waits
+for the FIP-101 statehash prerequisite, and keeps proof-publisher disabled. When
+detection succeeds, it usually asks only for RPC password confirmation and final
+deployment approval.
+
+Use menu option `2` for the advanced one-pass wizard when you need full control.
 
 ## Reattach After SSH Disconnect
 
@@ -102,6 +107,9 @@ For public tutorials, prefer the persistent wrapper.
 # Non-destructive readiness report
 bash scripts/deploy-menu.sh --doctor
 
+# Start beginner mode directly
+bash scripts/deploy-menu.sh --beginner
+
 # Validate Fractald RPC from inside Docker networking
 bash scripts/deploy-menu.sh --validate-rpc
 
@@ -131,6 +139,8 @@ bash scripts/deploy-menu.sh --self-test
 
 - [English quick start](docs/QUICKSTART.en.md)
 - [Chinese quick start](docs/QUICKSTART.zh-CN.md)
+- [Beginner difficulty guide](docs/BEGINNER.en.md)
+- [小白使用难度说明](docs/BEGINNER.zh-CN.md)
 - [Configuration requirements](docs/CONFIGURATION.en.md)
 - [中文配置需求说明](docs/CONFIGURATION.zh-CN.md)
 - [Official deployment bundle updates](docs/OFFICIAL-UPDATES.en.md)

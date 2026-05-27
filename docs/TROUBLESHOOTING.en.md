@@ -17,8 +17,8 @@ bash scripts/deploy-menu.sh --health
 If the snapshot finished but the automatic flow stopped before service startup,
 use the menu to continue:
 
-- option `7`: initialize and start `fractal-indexer`
-- option `8`: initialize and start `stake-indexer`
+- option `8`: initialize and start `fractal-indexer`
+- option `9`: initialize and start `stake-indexer`
 
 ## Fractald RPC Fails
 
