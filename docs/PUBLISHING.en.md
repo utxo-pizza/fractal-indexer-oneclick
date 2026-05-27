@@ -19,9 +19,10 @@ git status --short
 
 Confirm no runtime files are present:
 
-- `fractal-indexer/data/`
-- `stake-indexer/data/`
-- `proof-publisher/config.json`
+- `.official/`
+- `.official/fractal-indexer-deploy/fractal-indexer/data/`
+- `.official/fractal-indexer-deploy/stake-indexer/data/`
+- `.official/fractal-indexer-deploy/proof-publisher/config.json`
 - `chain.yaml`
 - private keys
 - RPC passwords
@@ -42,6 +43,7 @@ git push -u origin main
 ```text
 First standalone release.
 
+- Fetches the official fractal-indexer-deploy bundle at runtime.
 - Deploys official fractal-indexer and stake-indexer for existing Fractald nodes.
 - Adds bilingual one-pass menu documentation.
 - Adds persistent tmux/screen/nohup launcher.

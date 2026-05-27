@@ -8,13 +8,17 @@ already have a working Fractald node and want to deploy the official
 stack with fewer manual steps.
 
 This first version deliberately does **not** install or sync Fractald. Treat the
-node as a separate prerequisite.
+node as a separate prerequisite. Official deployment directories are fetched at
+runtime into `.official/fractal-indexer-deploy`; this repository keeps only the
+one-click scripts and documentation.
 
 ## What It Deploys
 
 - Official `fractalbitcoin/fractal-indexer` Docker image and data services.
 - Official `fractalbitcoin/stake-indexer:v0.1.1` Docker image.
 - Optional official `fractalbitcoin/fractal-proof-publisher` dry-run config.
+- Runtime fetch/update of the official `fractal-bitcoin/fractal-indexer-deploy`
+  repository.
 - Official Fractal indexer snapshot restore at height `1753260`.
 - Safety checks for RPC/ZMQ, pruned-node compatibility, statehash readiness,
   Docker Compose ownership, official image repositories, and local-only
@@ -104,6 +108,12 @@ bash scripts/deploy-menu.sh --validate-rpc
 # Check whether fractal-indexer has the stake statehash prerequisite
 bash scripts/deploy-menu.sh --validate-statehash
 
+# Sync the official fractal-indexer-deploy bundle
+bash scripts/deploy-menu.sh --sync-official
+
+# Show current official deployment bundle version
+bash scripts/deploy-menu.sh --official-status
+
 # Full service health check
 bash scripts/deploy-menu.sh --health
 
@@ -123,6 +133,8 @@ bash scripts/deploy-menu.sh --self-test
 - [Chinese quick start](docs/QUICKSTART.zh-CN.md)
 - [Configuration requirements](docs/CONFIGURATION.en.md)
 - [中文配置需求说明](docs/CONFIGURATION.zh-CN.md)
+- [Official deployment bundle updates](docs/OFFICIAL-UPDATES.en.md)
+- [官方部署包更新策略](docs/OFFICIAL-UPDATES.zh-CN.md)
 - [Operations guide](docs/OPERATIONS.en.md)
 - [中文运维指南](docs/OPERATIONS.zh-CN.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.en.md)

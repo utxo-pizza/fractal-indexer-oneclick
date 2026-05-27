@@ -58,6 +58,8 @@ bash scripts/deploy-menu.sh --health
   `bash scripts/deploy-menu.sh --self-test`
 - checks pruned Fractald nodes still retain the snapshot height before using
   the official snapshot
+- fetches or fast-forwards the official `fractal-indexer-deploy` bundle under
+  `.official/fractal-indexer-deploy`
 - can install missing runtime dependencies on supported Linux systems
 - can clone optional official source repositories for research
 - can generate local Docker Compose resource overrides automatically or manually;
@@ -68,11 +70,11 @@ bash scripts/deploy-menu.sh --health
 - checks required tools: Docker, Docker Compose, `curl`, `tar`, `zstd`, and `git`
 - checks that the official `init.sh` ownership steps can run as root or through
   usable `sudo` before deployment reaches data initialization
-- reports CRLF line endings in bundled helper scripts without changing tracked
+- reports CRLF line endings in official helper scripts without changing tracked
   files, then uses temporary LF-normalized copies only when running initialization
 - creates local `chain.yaml` files for `fractal-indexer` and `stake-indexer`
 - validates official Fractal images, the official `stake-indexer` pinned image,
-  and the reward start height from the checked-in config
+  and the reward start height from the fetched official config
 - pulls official indexer images when the registry is reachable, while keeping
   startup diagnostics for stale local containers
 - warns during preflight when free disk is below the default snapshot restore
@@ -219,10 +221,11 @@ applying the default localhost-only bindings for internal stores.
 
 ## Official Version Guardrails
 
-The menu is intentionally official-version-only. It does not run locally modified
-fractal-indexer, stake-indexer, or proof-publisher images. If an official image
-and official deploy config are out of sync, the menu should stop with a clear
-diagnostic instead of guessing protocol fields.
+The menu is intentionally official-version-only. It fetches service templates
+from `fractal-bitcoin/fractal-indexer-deploy` at runtime and does not run
+locally modified fractal-indexer, stake-indexer, or proof-publisher images. If
+an official image and official deploy config are out of sync, the menu should
+stop with a clear diagnostic instead of guessing protocol fields.
 
 The validation step checks the active runtime Compose file, so edits to the
 generated `docker-compose.menu.yaml` are validated too.
@@ -392,6 +395,23 @@ or starting services:
 bash scripts/deploy-menu.sh --doctor
 ```
 
+## Official Deploy Bundle
+
+This repository does not vendor the official service directories. The menu uses
+`.official/fractal-indexer-deploy` as a local checkout of the official
+deployment repository.
+
+Useful commands:
+
+```bash
+bash scripts/deploy-menu.sh --sync-official
+bash scripts/deploy-menu.sh --official-status
+```
+
+Set `OFFICIAL_DEPLOY_UPDATE=never` to stop automatic fast-forward updates for a
+single run, or set `OFFICIAL_DEPLOY_REF=<tag-or-commit>` to pin a specific
+upstream version.
+
 The readiness report chains preflight, container RPC validation, prune/snapshot
 compatibility, the default snapshot disk guard, and default startup port
 availability. It exits non-zero when the default path is blocked, for example
@@ -451,15 +471,15 @@ to the same manual commands documented in the root README and each service
 directory:
 
 ```bash
-cd fractal-indexer && bash ./scripts/init.sh && docker compose up -d
-cd stake-indexer && bash ./scripts/init.sh && docker compose up -d
+cd .official/fractal-indexer-deploy/fractal-indexer && bash ./scripts/init.sh && docker compose up -d
+cd ../stake-indexer && bash ./scripts/init.sh && docker compose up -d
 ```
 
 When the menu has generated `docker-compose.menu.yaml`, operate each affected
 stack through the menu or include the generated files explicitly:
 
 ```bash
-cd fractal-indexer && docker-compose -f docker-compose.menu.yaml -f docker-compose.override.yaml up -d
+cd .official/fractal-indexer-deploy/fractal-indexer && docker-compose -f docker-compose.menu.yaml -f docker-compose.override.yaml up -d
 cd ../stake-indexer && docker-compose -f docker-compose.menu.yaml -f docker-compose.override.yaml up -d
 ```
 

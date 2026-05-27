@@ -10,8 +10,8 @@ menu validates and runs official Docker image repositories:
 - `fractalbitcoin/stake-indexer`
 - `fractalbitcoin/fractal-proof-publisher`
 
-Bundled service configuration templates are derived from the public Fractal
-Bitcoin deployment layout and point to the upstream project repositories:
+Official service configuration templates are fetched at runtime from the public
+Fractal Bitcoin deployment layout. The default upstream repositories are:
 
 - https://github.com/fractal-bitcoin/fractal-indexer
 - https://github.com/fractal-bitcoin/stake-indexer

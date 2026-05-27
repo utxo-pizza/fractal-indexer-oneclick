@@ -4,6 +4,10 @@
 `fractal-indexer`、`stake-indexer` 和可选 dry-run `proof-publisher`；它不安装、
 不同步 Fractald 节点。
 
+官方部署模板不会复制进本仓库。脚本运行时会把官方
+`fractal-bitcoin/fractal-indexer-deploy` 拉取到
+`.official/fractal-indexer-deploy`，然后在这个目录里生成本地配置。
+
 ## 1. 服务器和系统
 
 最低建议：
@@ -112,13 +116,13 @@ Fractald 连接：
 
 菜单会生成这些本地运行时文件，它们都不应该提交到 Git：
 
-- `fractal-indexer/conf/indexer/chain.yaml`
-- `stake-indexer/conf/indexer/chain.yaml`
-- `proof-publisher/config.json`
-- `fractal-indexer/docker-compose.override.yaml`
-- `stake-indexer/docker-compose.override.yaml`
-- `fractal-indexer/docker-compose.menu.yaml`
-- `stake-indexer/docker-compose.menu.yaml`
+- `.official/fractal-indexer-deploy/fractal-indexer/conf/indexer/chain.yaml`
+- `.official/fractal-indexer-deploy/stake-indexer/conf/indexer/chain.yaml`
+- `.official/fractal-indexer-deploy/proof-publisher/config.json`
+- `.official/fractal-indexer-deploy/fractal-indexer/docker-compose.override.yaml`
+- `.official/fractal-indexer-deploy/stake-indexer/docker-compose.override.yaml`
+- `.official/fractal-indexer-deploy/fractal-indexer/docker-compose.menu.yaml`
+- `.official/fractal-indexer-deploy/stake-indexer/docker-compose.menu.yaml`
 - `data/`
 - `logs/`
 
@@ -154,6 +158,18 @@ Fractald 的 `8332`、`10330`、`10331` 由你的节点负责，不由本项目�
 
 如果官方规则变化，应该更新本仓库后重新跑 `--doctor` 和 `--self-test`。
 
+如果只想更新官方部署模板：
+
+```bash
+bash scripts/deploy-menu.sh --sync-official
+```
+
+如果需要固定到某个官方 tag、branch 或 commit：
+
+```bash
+OFFICIAL_DEPLOY_REF=<tag-or-commit> bash scripts/deploy-menu.sh --sync-official
+```
+
 ## 7. 部署前检查
 
 先跑：
@@ -173,4 +189,3 @@ bash scripts/deploy-menu.sh --validate-rpc
 ```bash
 bash scripts/deploy-menu.sh --health
 ```
-

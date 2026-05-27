@@ -8,10 +8,14 @@ DEFAULT_RPC_PORT="${DEFAULT_RPC_PORT:-8332}"
 SNAPSHOT_MIN_FREE_GB="${SNAPSHOT_MIN_FREE_GB:-400}"
 INTERNAL_PORT_BIND_MODE="${INTERNAL_PORT_BIND_MODE:-localhost}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FRACTAL_INDEXER_DIR="${ROOT_DIR}/fractal-indexer"
-STAKE_INDEXER_DIR="${ROOT_DIR}/stake-indexer"
+OFFICIAL_DEPLOY_REPO="${OFFICIAL_DEPLOY_REPO:-https://github.com/fractal-bitcoin/fractal-indexer-deploy.git}"
+OFFICIAL_DEPLOY_REF="${OFFICIAL_DEPLOY_REF:-}"
+OFFICIAL_DEPLOY_UPDATE="${OFFICIAL_DEPLOY_UPDATE:-auto}"
+DEPLOY_BUNDLE_DIR="${DEPLOY_BUNDLE_DIR:-${ROOT_DIR}/.official/fractal-indexer-deploy}"
+FRACTAL_INDEXER_DIR="${DEPLOY_BUNDLE_DIR}/fractal-indexer"
+STAKE_INDEXER_DIR="${DEPLOY_BUNDLE_DIR}/stake-indexer"
 STAKE_CONFIG_FILE="${STAKE_INDEXER_DIR}/conf/indexer/config.yaml"
-PROOF_PUBLISHER_DIR="${ROOT_DIR}/proof-publisher"
+PROOF_PUBLISHER_DIR="${DEPLOY_BUNDLE_DIR}/proof-publisher"
 PROOF_CONFIG_EXAMPLE="${PROOF_PUBLISHER_DIR}/config.example.json"
 FRACTAL_MENU_COMPOSE="${FRACTAL_INDEXER_DIR}/docker-compose.menu.yaml"
 STAKE_MENU_COMPOSE="${STAKE_INDEXER_DIR}/docker-compose.menu.yaml"
@@ -68,15 +72,46 @@ CFG_MANUAL_POSTGRES_GB=""
 CFG_MANUAL_REDIS_GB=""
 
 main() {
-  require_repo_root
   set_language_from_env
-  detect_compose || true
 
   case "${1:-}" in
     --help|-h)
       print_help
       return 0
       ;;
+    --self-test)
+      self_test
+      return 0
+      ;;
+    --sync-official)
+      ensure_official_deploy_bundle "force"
+      return 0
+      ;;
+    --official-status)
+      official_deploy_bundle_status
+      return 0
+      ;;
+    --proof-registration-checklist)
+      proof_publisher_registration_checklist
+      return 0
+      ;;
+    --register-operator)
+      operator_registration_not_available
+      return 2
+      ;;
+    "")
+      select_language
+      ensure_official_deploy_bundle "auto" || return 1
+      detect_compose || true
+      menu_loop
+      return 0
+      ;;
+  esac
+
+  ensure_official_deploy_bundle "auto" || return 1
+  detect_compose || true
+
+  case "${1:-}" in
     --check)
       preflight
       return 0
@@ -93,10 +128,6 @@ main() {
       readiness_check
       return 0
       ;;
-    --self-test)
-      self_test
-      return 0
-      ;;
     --health)
       health_check
       return 0
@@ -105,25 +136,12 @@ main() {
       validate_proof_publisher_config_file
       return 0
       ;;
-    --proof-registration-checklist)
-      proof_publisher_registration_checklist
-      return 0
-      ;;
-    --register-operator)
-      operator_registration_not_available
-      return 2
-      ;;
-    "")
-      ;;
     *)
       error_i "Unknown argument: ${1}" "未知参数：${1}"
       print_help
       return 1
       ;;
   esac
-
-  select_language
-  menu_loop
 }
 
 set_language_from_env() {
@@ -206,6 +224,8 @@ Fractal Indexer 交互式部署菜单
   bash scripts/deploy-menu.sh --validate-statehash
   bash scripts/deploy-menu.sh --doctor
   bash scripts/deploy-menu.sh --self-test
+  bash scripts/deploy-menu.sh --sync-official
+  bash scripts/deploy-menu.sh --official-status
   bash scripts/deploy-menu.sh --health
   bash scripts/deploy-menu.sh --validate-proof
   bash scripts/deploy-menu.sh --proof-registration-checklist
@@ -219,6 +239,10 @@ Fractal Indexer 交互式部署菜单
   DEFAULT_RPC_PORT=8332
   SNAPSHOT_MIN_FREE_GB=400
   INTERNAL_PORT_BIND_MODE=localhost|official
+  OFFICIAL_DEPLOY_REPO=https://github.com/fractal-bitcoin/fractal-indexer-deploy.git
+  OFFICIAL_DEPLOY_REF=<branch|tag|commit>
+  OFFICIAL_DEPLOY_UPDATE=auto|never
+  DEPLOY_BUNDLE_DIR=.official/fractal-indexer-deploy
 
 菜单能力：
   - 中英语言选择
@@ -226,6 +250,7 @@ Fractal Indexer 交互式部署菜单
   - 自动识别本机 Fractald 节点配置
   - 可选自动安装缺失运行依赖
   - 生成默认一条路部署可用性诊断
+  - 自动拉取/更新官方 fractal-indexer-deploy 部署包
   - 运行脚本内部自测，便于开源维护
   - 一次性收集 RPC/ZMQ/proof-publisher 配置
   - 校验官方镜像、stake-indexer 版本和奖励起点高度
@@ -249,6 +274,8 @@ Usage:
   bash scripts/deploy-menu.sh --validate-statehash
   bash scripts/deploy-menu.sh --doctor
   bash scripts/deploy-menu.sh --self-test
+  bash scripts/deploy-menu.sh --sync-official
+  bash scripts/deploy-menu.sh --official-status
   bash scripts/deploy-menu.sh --health
   bash scripts/deploy-menu.sh --validate-proof
   bash scripts/deploy-menu.sh --proof-registration-checklist
@@ -262,6 +289,10 @@ Environment:
   DEFAULT_RPC_PORT=8332
   SNAPSHOT_MIN_FREE_GB=400
   INTERNAL_PORT_BIND_MODE=localhost|official
+  OFFICIAL_DEPLOY_REPO=https://github.com/fractal-bitcoin/fractal-indexer-deploy.git
+  OFFICIAL_DEPLOY_REF=<branch|tag|commit>
+  OFFICIAL_DEPLOY_UPDATE=auto|never
+  DEPLOY_BUNDLE_DIR=.official/fractal-indexer-deploy
 
 The interactive menu can:
   - select English or Chinese
@@ -269,6 +300,7 @@ The interactive menu can:
   - auto-detect local Fractald node configuration
   - optionally install missing runtime dependencies
   - generate a default one-pass deployment readiness report
+  - fetch/update the official fractal-indexer-deploy bundle automatically
   - run internal script self-tests for maintainers
   - collect RPC/ZMQ/proof-publisher settings once
   - validate official images, stake-indexer version, and reward start height
@@ -365,6 +397,7 @@ banner() {
 ${COLOR_GREEN}Fractal Indexer Deploy Menu${COLOR_RESET}
 $(choose_text "Language" "语言"):   $(choose_text "English" "中文")
 $(choose_text "Repository" "仓库"): ${ROOT_DIR}
+$(choose_text "Official deploy bundle" "官方部署包"): ${DEPLOY_BUNDLE_DIR}
 $(choose_text "Snapshot" "快照"):   ${SNAPSHOT_HEIGHT}
 
 EOF
@@ -383,11 +416,136 @@ pause() {
   fi
 }
 
-require_repo_root() {
-  if [[ ! -d "${FRACTAL_INDEXER_DIR}" || ! -d "${STAKE_INDEXER_DIR}" || ! -d "${PROOF_PUBLISHER_DIR}" ]]; then
-    error_i "Run this script from the fractal-indexer-deploy repository." "请在 fractal-indexer-deploy 仓库根目录运行这个脚本。"
-    exit 1
+ensure_official_deploy_bundle() {
+  local mode="${1:-auto}"
+  local parent head
+  require_command git || return 1
+  parent="$(dirname "${DEPLOY_BUNDLE_DIR}")"
+  if [[ -d "${DEPLOY_BUNDLE_DIR}/.git" ]]; then
+    if ! is_official_repo "${DEPLOY_BUNDLE_DIR}" "${OFFICIAL_DEPLOY_REPO}"; then
+      error_i "Existing deploy bundle is not the configured official repository: ${DEPLOY_BUNDLE_DIR}" "现有部署包不是配置的官方仓库：${DEPLOY_BUNDLE_DIR}"
+      return 1
+    fi
+    install_official_deploy_excludes || return 1
+    if [[ "${mode}" == "force" || "${OFFICIAL_DEPLOY_UPDATE}" == "auto" ]]; then
+      info_i "Updating official fractal-indexer-deploy bundle" "更新官方 fractal-indexer-deploy 部署包"
+      sync_official_deploy_bundle || return 1
+    fi
+  else
+    if [[ -e "${DEPLOY_BUNDLE_DIR}" ]]; then
+      error_i "Deploy bundle path exists but is not a git repository: ${DEPLOY_BUNDLE_DIR}" "部署包路径已存在但不是 git 仓库：${DEPLOY_BUNDLE_DIR}"
+      return 1
+    fi
+    mkdir -p "${parent}" || return 1
+    info_i "Cloning official fractal-indexer-deploy bundle" "克隆官方 fractal-indexer-deploy 部署包"
+    git clone "${OFFICIAL_DEPLOY_REPO}" "${DEPLOY_BUNDLE_DIR}" || return 1
+    install_official_deploy_excludes || return 1
+    if [[ -n "${OFFICIAL_DEPLOY_REF}" ]]; then
+      sync_official_deploy_bundle || return 1
+    fi
   fi
+  require_official_deploy_files || return 1
+  head="$(git -C "${DEPLOY_BUNDLE_DIR}" rev-parse --short HEAD 2>/dev/null || printf "unknown")"
+  line_i "OK   official deploy bundle ready: ${DEPLOY_BUNDLE_DIR} (${head})" "OK   官方部署包已就绪：${DEPLOY_BUNDLE_DIR}（${head}）"
+}
+
+sync_official_deploy_bundle() {
+  local branch current
+  git -C "${DEPLOY_BUNDLE_DIR}" fetch --tags origin || return 1
+  if [[ -n "${OFFICIAL_DEPLOY_REF}" ]]; then
+    git -C "${DEPLOY_BUNDLE_DIR}" checkout --detach "${OFFICIAL_DEPLOY_REF}" || return 1
+    return 0
+  fi
+
+  branch="$(official_deploy_default_branch)" || return 1
+  current="$(git -C "${DEPLOY_BUNDLE_DIR}" branch --show-current 2>/dev/null || true)"
+  if [[ -z "${current}" ]]; then
+    if git -C "${DEPLOY_BUNDLE_DIR}" show-ref --verify --quiet "refs/heads/${branch}"; then
+      git -C "${DEPLOY_BUNDLE_DIR}" checkout "${branch}" || return 1
+    else
+      git -C "${DEPLOY_BUNDLE_DIR}" checkout -b "${branch}" --track "origin/${branch}" || return 1
+    fi
+  fi
+
+  git -C "${DEPLOY_BUNDLE_DIR}" pull --ff-only || return 1
+}
+
+official_deploy_default_branch() {
+  local branch
+  branch="$(git -C "${DEPLOY_BUNDLE_DIR}" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+  branch="${branch#origin/}"
+  if [[ -n "${branch}" ]]; then
+    printf "%s" "${branch}"
+    return 0
+  fi
+
+  git -C "${DEPLOY_BUNDLE_DIR}" remote set-head origin -a >/dev/null 2>&1 || true
+  branch="$(git -C "${DEPLOY_BUNDLE_DIR}" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+  branch="${branch#origin/}"
+  if [[ -n "${branch}" ]]; then
+    printf "%s" "${branch}"
+    return 0
+  fi
+
+  if git -C "${DEPLOY_BUNDLE_DIR}" show-ref --verify --quiet refs/remotes/origin/main; then
+    printf "main"
+    return 0
+  fi
+  if git -C "${DEPLOY_BUNDLE_DIR}" show-ref --verify --quiet refs/remotes/origin/master; then
+    printf "master"
+    return 0
+  fi
+
+  error_i "Could not determine the official deploy repository default branch." "无法识别官方部署仓库的默认分支。"
+  return 1
+}
+
+install_official_deploy_excludes() {
+  local exclude_file entry
+  exclude_file="${DEPLOY_BUNDLE_DIR}/.git/info/exclude"
+  mkdir -p "$(dirname "${exclude_file}")" || return 1
+  touch "${exclude_file}" || return 1
+  for entry in \
+    "/fractal-indexer/conf/indexer/chain.yaml" \
+    "/stake-indexer/conf/indexer/chain.yaml" \
+    "/proof-publisher/config.json" \
+    "/fractal-indexer/docker-compose.override.yaml" \
+    "/stake-indexer/docker-compose.override.yaml" \
+    "/fractal-indexer/docker-compose.menu.yaml" \
+    "/stake-indexer/docker-compose.menu.yaml" \
+    "/fractal-indexer/data/" \
+    "/stake-indexer/data/" \
+    "/proof-publisher/logs/" \
+    "/logs/" \
+    "*.bak.*" \
+    "data.backup.*/" \
+    "data.restore.*/"; do
+    grep -Fxq "${entry}" "${exclude_file}" 2>/dev/null || printf "%s\n" "${entry}" >>"${exclude_file}"
+  done
+}
+
+official_deploy_bundle_status() {
+  require_command git || return 1
+  if [[ ! -d "${DEPLOY_BUNDLE_DIR}/.git" ]]; then
+    warn_i "Official deploy bundle is not cloned yet: ${DEPLOY_BUNDLE_DIR}" "官方部署包尚未克隆：${DEPLOY_BUNDLE_DIR}"
+    return 1
+  fi
+  install_official_deploy_excludes || return 1
+  git -C "${DEPLOY_BUNDLE_DIR}" remote -v
+  git -C "${DEPLOY_BUNDLE_DIR}" status --short --branch
+  git -C "${DEPLOY_BUNDLE_DIR}" log --oneline -3
+}
+
+require_official_deploy_files() {
+  local failed=0
+  [[ -d "${FRACTAL_INDEXER_DIR}" ]] || { error_i "Missing official fractal-indexer directory in deploy bundle." "官方部署包缺少 fractal-indexer 目录。"; failed=1; }
+  [[ -d "${STAKE_INDEXER_DIR}" ]] || { error_i "Missing official stake-indexer directory in deploy bundle." "官方部署包缺少 stake-indexer 目录。"; failed=1; }
+  [[ -d "${PROOF_PUBLISHER_DIR}" ]] || { error_i "Missing official proof-publisher directory in deploy bundle." "官方部署包缺少 proof-publisher 目录。"; failed=1; }
+  [[ -f "${FRACTAL_INDEXER_DIR}/docker-compose.yaml" ]] || failed=1
+  [[ -f "${STAKE_INDEXER_DIR}/docker-compose.yaml" ]] || failed=1
+  [[ -f "${PROOF_PUBLISHER_DIR}/docker-compose.yaml" ]] || failed=1
+  [[ -f "${STAKE_CONFIG_FILE}" ]] || failed=1
+  return "${failed}"
 }
 
 detect_compose() {
@@ -587,7 +745,7 @@ print_environment_summary() {
   check_related_repo "fractal-indexer" "${ROOT_DIR}/../fractal-indexer" "https://github.com/fractal-bitcoin/fractal-indexer"
   check_related_repo "stake-indexer" "${ROOT_DIR}/../stake-indexer" "https://github.com/fractal-bitcoin/stake-indexer"
   check_related_repo "fractal-proof-publisher" "${ROOT_DIR}/../fractal-proof-publisher" "https://github.com/fractal-bitcoin/fractal-proof-publisher"
-  line_i "  Note: source repositories are optional for research only; deployment uses official Docker images and this deploy repository." "  说明：源码库仅用于研究；部署只使用官方 Docker 镜像和当前 deploy 仓库。"
+  line_i "  Note: source repositories are optional for research only; deployment uses official Docker images and the runtime official deploy bundle." "  说明：源码库仅用于研究；部署只使用官方 Docker 镜像和运行时官方部署包。"
   printf "\n"
   detect_fractald_config false
   print_fractald_detection_summary
@@ -1128,7 +1286,7 @@ readiness_check() {
 }
 
 self_test() {
-  local failed=0 tmp actual fixture_dir helper_status helper_has_cr helper_ran old_fractal_dir old_proof_dir
+  local failed=0 tmp actual fixture_dir helper_status helper_has_cr helper_ran old_fractal_dir old_proof_dir old_stake_config_file old_proof_config_example
   info_i "Running internal script self-tests" "运行脚本内部自测"
   line_i "This check is non-destructive. It does not use Docker, write configs, or contact Fractald." "这个检查不会改动部署状态，不使用 Docker、不写配置、不连接 Fractald。"
 
@@ -1155,6 +1313,17 @@ self_test() {
   self_test_assert_success "operator registration command safely refuses before official launch" grep -Fq 'operator registration is not enabled yet' "${BASH_SOURCE[0]}" || failed=1
   local old_docker_cmd
   old_docker_cmd="$(declare -f docker_cmd)"
+  fixture_dir="$(mktemp -d)" || return 1
+  mkdir -p "${fixture_dir}/proof-publisher" || {
+    rm -rf "${fixture_dir}"
+    return 1
+  }
+  printf 'services:\n  proof-publisher:\n    image: fractalbitcoin/fractal-proof-publisher:latest\n' >"${fixture_dir}/proof-publisher/docker-compose.yaml" || {
+    rm -rf "${fixture_dir}"
+    return 1
+  }
+  old_proof_dir="${PROOF_PUBLISHER_DIR}"
+  PROOF_PUBLISHER_DIR="${fixture_dir}/proof-publisher"
   docker_cmd() {
     local last="${!#}"
     case "${last}" in
@@ -1174,6 +1343,8 @@ self_test() {
   self_test_assert_success "proof-publisher image prerequisite accepts registry manifest" check_proof_publisher_image_prerequisite || failed=1
   self_test_assert_success "proof-publisher image is checked before long deployment work" grep -Fq 'check_proof_publisher_image_prerequisite || return 1' "${BASH_SOURCE[0]}" || failed=1
   eval "${old_docker_cmd}"
+  PROOF_PUBLISHER_DIR="${old_proof_dir}"
+  rm -rf "${fixture_dir}"
 
   fixture_dir="$(mktemp -d)" || return 1
   printf 'services:\n  indexer:\n    image: fractalbitcoin/fractal-indexer:latest\n  api:\n    image: "fractalbitcoin/fractal-indexer:v0.2.0"\n  local:\n    image: local/fractal-indexer:test\n' >"${fixture_dir}/compose.yaml" || {
@@ -1214,6 +1385,24 @@ self_test() {
   self_test_assert_equal "json_number pruneheight" "159" "$(json_number "${tmp}" "pruneheight")" || failed=1
   rm -f "${tmp}"
 
+  fixture_dir="$(mktemp -d)" || return 1
+  mkdir -p "${fixture_dir}/stake-indexer/conf/indexer" "${fixture_dir}/proof-publisher" || {
+    rm -rf "${fixture_dir}"
+    return 1
+  }
+  printf 'start_reward_height: 1760000\n' >"${fixture_dir}/stake-indexer/conf/indexer/config.yaml" || {
+    rm -rf "${fixture_dir}"
+    return 1
+  }
+  printf '{"scan":{"start_height":1764000}}\n' >"${fixture_dir}/proof-publisher/config.example.json" || {
+    rm -rf "${fixture_dir}"
+    return 1
+  }
+  old_stake_config_file="${STAKE_CONFIG_FILE}"
+  old_proof_config_example="${PROOF_CONFIG_EXAMPLE}"
+  STAKE_CONFIG_FILE="${fixture_dir}/stake-indexer/conf/indexer/config.yaml"
+  PROOF_CONFIG_EXAMPLE="${fixture_dir}/proof-publisher/config.example.json"
+
   actual="$(stake_statehash_height)" || failed=1
   if [[ "${actual:-}" =~ ^[0-9]+$ ]]; then
     printf "OK   stake start_reward_height is numeric: %s\n" "${actual}"
@@ -1228,6 +1417,9 @@ self_test() {
     error_i "proof-publisher scan start_height is not numeric: ${actual:-missing}" "proof-publisher scan start_height 不是数字：${actual:-缺失}"
     failed=1
   fi
+  STAKE_CONFIG_FILE="${old_stake_config_file}"
+  PROOF_CONFIG_EXAMPLE="${old_proof_config_example}"
+  rm -rf "${fixture_dir}"
 
   fixture_dir="$(mktemp -d)" || return 1
   mkdir -p "${fixture_dir}/proof-publisher" || {

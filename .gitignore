@@ -1,6 +1,7 @@
 .DS_Store
 
 # Local configs and runtime data
+.official/
 config.json
 */config.json
 */docker-compose.override.yaml

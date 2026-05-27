@@ -10,6 +10,8 @@ Fractal indexer stack when a Fractald node already exists.
 - Optional dependency installation for the indexer stack.
 - Fractald RPC/ZMQ configuration collection.
 - Fractald connectivity validation from Docker networking.
+- Runtime fetch/update of the official `fractal-indexer-deploy` deployment
+  bundle under `.official/fractal-indexer-deploy`.
 - Official `fractal-indexer` snapshot restore.
 - Official `fractal-indexer` startup.
 - Official `stake-indexer` startup after statehash readiness.
@@ -35,10 +37,12 @@ Fractal indexer stack when a Fractald node already exists.
 - Dynamic commission algorithms.
 - Modifying FIP-101 rules.
 - Running local patched service images.
+- Vendoring official deployment service directories in this repository.
 - Automatically broadcasting real proof or registration transactions.
 
 ## Official-Only Boundary
 
 The deploy menu validates official Docker image repositories and refuses local
-modified service images. This package is an operator workflow, not a protocol
-fork.
+modified service images. Official Compose/service templates are pulled from
+`fractal-bitcoin/fractal-indexer-deploy` at runtime. This package is an operator
+workflow, not a protocol fork.

@@ -1,2 +1,0 @@
-rpc: "http://fractald:8332"
-rpc_auth: "" # user:password

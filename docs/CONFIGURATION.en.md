@@ -4,6 +4,11 @@ This document explains the external configuration required by the one-click
 menu. This project deploys the official `fractal-indexer`, `stake-indexer`, and
 optional dry-run `proof-publisher`; it does not install or sync Fractald.
 
+Official deployment templates are not vendored into this repository. At runtime,
+the script fetches `fractal-bitcoin/fractal-indexer-deploy` into
+`.official/fractal-indexer-deploy`, then writes local configuration inside that
+directory.
+
 ## 1. Server And System
 
 Recommended minimum:
@@ -122,13 +127,13 @@ does not perform real registration, signing, or broadcasting.
 
 The menu generates local runtime files. Do not commit them:
 
-- `fractal-indexer/conf/indexer/chain.yaml`
-- `stake-indexer/conf/indexer/chain.yaml`
-- `proof-publisher/config.json`
-- `fractal-indexer/docker-compose.override.yaml`
-- `stake-indexer/docker-compose.override.yaml`
-- `fractal-indexer/docker-compose.menu.yaml`
-- `stake-indexer/docker-compose.menu.yaml`
+- `.official/fractal-indexer-deploy/fractal-indexer/conf/indexer/chain.yaml`
+- `.official/fractal-indexer-deploy/stake-indexer/conf/indexer/chain.yaml`
+- `.official/fractal-indexer-deploy/proof-publisher/config.json`
+- `.official/fractal-indexer-deploy/fractal-indexer/docker-compose.override.yaml`
+- `.official/fractal-indexer-deploy/stake-indexer/docker-compose.override.yaml`
+- `.official/fractal-indexer-deploy/fractal-indexer/docker-compose.menu.yaml`
+- `.official/fractal-indexer-deploy/stake-indexer/docker-compose.menu.yaml`
 - `data/`
 - `logs/`
 
@@ -167,6 +172,18 @@ For normal deployments, do not manually change:
 If official rules change, update this repository and rerun `--doctor` and
 `--self-test`.
 
+To update only the official deployment templates:
+
+```bash
+bash scripts/deploy-menu.sh --sync-official
+```
+
+To pin a specific official tag, branch, or commit:
+
+```bash
+OFFICIAL_DEPLOY_REF=<tag-or-commit> bash scripts/deploy-menu.sh --sync-official
+```
+
 ## 7. Preflight Checks
 
 Before deployment:
@@ -186,4 +203,3 @@ After deployment:
 ```bash
 bash scripts/deploy-menu.sh --health
 ```
-

@@ -25,6 +25,11 @@ git clone https://github.com/utxo-pizza/fractal-indexer-oneclick.git
 cd fractal-indexer-oneclick
 ```
 
+The first menu run automatically fetches the official
+`fractal-bitcoin/fractal-indexer-deploy` repository into
+`.official/fractal-indexer-deploy`. See
+[Official Deployment Bundle Updates](OFFICIAL-UPDATES.en.md) for details.
+
 ## 3. Start The Menu
 
 ```bash

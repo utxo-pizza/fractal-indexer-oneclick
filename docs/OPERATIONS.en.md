@@ -6,11 +6,13 @@
 2. Confirm RPC and ZMQ are enabled.
 3. Use [Configuration Requirements](CONFIGURATION.en.md) to confirm the
    container-visible RPC/ZMQ endpoints.
-4. Start this menu through `scripts/run-menu-persistent.sh`.
-5. Run option `15` or `--doctor` for a non-destructive readiness report.
-6. Run option `1` for one-pass deployment.
-7. Reattach with `tmux attach -t fractal-indexer-oneclick` if SSH disconnects.
-8. Run `bash scripts/deploy-menu.sh --health`.
+4. Run `bash scripts/deploy-menu.sh --sync-official` to fetch or update the
+   official deployment bundle.
+5. Start this menu through `scripts/run-menu-persistent.sh`.
+6. Run option `15` or `--doctor` for a non-destructive readiness report.
+7. Run option `1` for one-pass deployment.
+8. Reattach with `tmux attach -t fractal-indexer-oneclick` if SSH disconnects.
+9. Run `bash scripts/deploy-menu.sh --health`.
 
 ## Service Order
 
@@ -36,7 +38,7 @@ tail -f logs/deploy-menu-latest.log
 Compose logs:
 
 ```bash
-cd fractal-indexer
+cd .official/fractal-indexer-deploy/fractal-indexer
 docker compose -f docker-compose.menu.yaml -f docker-compose.override.yaml logs --tail=100 -f
 ```
 

@@ -7,12 +7,15 @@ Fractald 节点，然后用交互式菜单部署官方 `fractal-indexer`、
 `stake-indexer`，以及可选的 dry-run `proof-publisher`。
 
 第一版明确不安装、不配置、不同步 Fractald 节点。节点部署是单独项目。
+官方部署目录会在运行时自动拉取到 `.official/fractal-indexer-deploy`，本仓库只保留
+一键脚本和文档。
 
 ## 它会部署什么
 
 - 官方 `fractalbitcoin/fractal-indexer` Docker 镜像和数据服务。
 - 官方 `fractalbitcoin/stake-indexer:v0.1.1` Docker 镜像。
 - 可选官方 `fractalbitcoin/fractal-proof-publisher` dry-run 配置。
+- 运行时自动拉取/更新官方 `fractal-bitcoin/fractal-indexer-deploy`。
 - 官方 `fractal-indexer` 高度 `1753260` 快照恢复。
 - RPC/ZMQ、剪枝节点兼容、statehash、Docker Compose 归属、官方镜像仓库、
   内部数据库端口 localhost-only 等安全检查。
@@ -96,6 +99,12 @@ bash scripts/deploy-menu.sh --validate-rpc
 # 检查 stake-indexer 所需 statehash 是否就绪
 bash scripts/deploy-menu.sh --validate-statehash
 
+# 同步官方 fractal-indexer-deploy 部署包
+bash scripts/deploy-menu.sh --sync-official
+
+# 查看当前官方部署包版本
+bash scripts/deploy-menu.sh --official-status
+
 # 完整服务健康检查
 bash scripts/deploy-menu.sh --health
 
@@ -115,6 +124,8 @@ bash scripts/deploy-menu.sh --self-test
 - [English quick start](docs/QUICKSTART.en.md)
 - [中文配置需求说明](docs/CONFIGURATION.zh-CN.md)
 - [Configuration requirements](docs/CONFIGURATION.en.md)
+- [官方部署包更新策略](docs/OFFICIAL-UPDATES.zh-CN.md)
+- [Official deployment bundle updates](docs/OFFICIAL-UPDATES.en.md)
 - [中文运维指南](docs/OPERATIONS.zh-CN.md)
 - [Operations guide](docs/OPERATIONS.en.md)
 - [中文故障排查](docs/TROUBLESHOOTING.zh-CN.md)

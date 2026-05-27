@@ -23,6 +23,10 @@ git clone https://github.com/utxo-pizza/fractal-indexer-oneclick.git
 cd fractal-indexer-oneclick
 ```
 
+首次运行菜单会自动拉取官方 `fractal-bitcoin/fractal-indexer-deploy` 到
+`.official/fractal-indexer-deploy`。更多说明见
+[官方部署包更新策略](OFFICIAL-UPDATES.zh-CN.md)。
+
 ## 3. 启动菜单
 
 ```bash
