@@ -1,21 +1,21 @@
 # 仓库发布设置
 
-发布前，把文档里的 GitHub owner 示例替换掉：
+当前发布仓库使用：
 
 ```bash
-grep -R "YOUR_ORG" -n README.md README.zh-CN.md docs
+https://github.com/EY-hungry/fractal-indexer-oneclick
 ```
 
-替换示例：
+如果发布 fork，再替换文档里的 owner：
 
 ```bash
-perl -pi -e 's/YOUR_ORG/<your-github-owner>/g' README.md README.zh-CN.md docs/*.md
+perl -pi -e 's/EY-hungry/<your-github-owner>/g' README.md README.zh-CN.md docs/*.md
 ```
 
 然后创建 GitHub 远程仓库并推送：
 
 ```bash
-git remote add origin https://github.com/<your-github-owner>/fractal-indexer-oneclick.git
+git remote add origin https://github.com/EY-hungry/fractal-indexer-oneclick.git
 git push -u origin main
 ```
 

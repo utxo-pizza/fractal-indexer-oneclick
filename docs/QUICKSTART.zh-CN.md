@@ -16,7 +16,7 @@ sudo apt-get install -y git tmux
 ## 2. 克隆项目
 
 ```bash
-git clone https://github.com/YOUR_ORG/fractal-indexer-oneclick.git
+git clone https://github.com/EY-hungry/fractal-indexer-oneclick.git
 cd fractal-indexer-oneclick
 ```
 

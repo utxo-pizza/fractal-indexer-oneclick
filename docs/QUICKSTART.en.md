@@ -17,7 +17,7 @@ menu can also install common missing dependencies later.
 ## 2. Clone
 
 ```bash
-git clone https://github.com/YOUR_ORG/fractal-indexer-oneclick.git
+git clone https://github.com/EY-hungry/fractal-indexer-oneclick.git
 cd fractal-indexer-oneclick
 ```
 

@@ -14,8 +14,17 @@ Fractal indexer stack when a Fractald node already exists.
 - Official `fractal-indexer` startup.
 - Official `stake-indexer` startup after statehash readiness.
 - Optional `proof-publisher` dry-run configuration.
+- Disabled future one-click operator registration entry that refuses real
+  registration until official third-party operator rules are public and stable.
 - Persistent-session wrapper for long-running SSH work.
 - GitHub-ready documentation and issue templates.
+
+## Planned After Official Registration Opens
+
+- One-click operator registration as a separate explicit menu action.
+- Pre-broadcast review of the transaction, fee, inscription payload, and
+  owner/change/reward addresses.
+- A required second confirmation before any real broadcast.
 
 ## Out of Scope
 

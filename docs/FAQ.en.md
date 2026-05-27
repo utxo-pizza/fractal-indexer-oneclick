@@ -40,6 +40,16 @@ Not by default. The generated config uses `dry_run=true` and
 `disable_broadcast=true`. Real broadcasting requires separate review and real
 operator credentials.
 
+## Should this add one-click operator registration later?
+
+Yes, but it must be a separate explicit flow, not part of the default deploy.
+The current menu prepares config and dry-run validation, and it reserves a
+one-click operator registration entry that safely refuses execution today. After
+the official registration rules, portal behavior, and transaction fields are
+stable, real registration can be wired into that entry. Before broadcasting, it
+must show the transaction, fee, inscription payload, owner/change/reward
+addresses, and require a second confirmation.
+
 ## Can I run this on a pruned Fractald node?
 
 Yes, only if the node can still serve the blocks required after the official

@@ -37,7 +37,7 @@ Fractald 节点，然后用交互式菜单部署官方 `fractal-indexer`、
 先安装 `git` 和 `tmux`，然后克隆项目：
 
 ```bash
-git clone https://github.com/YOUR_ORG/fractal-indexer-oneclick.git
+git clone https://github.com/EY-hungry/fractal-indexer-oneclick.git
 cd fractal-indexer-oneclick
 ```
 
@@ -97,6 +97,12 @@ bash scripts/deploy-menu.sh --validate-statehash
 # 完整服务健康检查
 bash scripts/deploy-menu.sh --health
 
+# 校验 proof-publisher dry-run 配置
+bash scripts/deploy-menu.sh --validate-proof
+
+# 查看未来运营商注册前置清单，不广播
+bash scripts/deploy-menu.sh --proof-registration-checklist
+
 # 维护者自测
 bash scripts/deploy-menu.sh --self-test
 ```
@@ -125,6 +131,10 @@ bash scripts/deploy-menu.sh --self-test
 - 内部数据库端口默认只绑定 `127.0.0.1`。
 - `proof-publisher` 默认生成 `dry_run=true` 和 `disable_broadcast=true`；
   真实广播必须单独人工复核。
+- 第三方运营商注册开放前，本项目只做注册配置准备和 dry-run 校验；未来加入
+  一键注册时也必须先展示交易、费用、铭文内容，并要求二次确认。
+- 菜单和 `--register-operator` 已预留一键注册入口；当前会安全拒绝执行，不会
+  签名或广播。
 - 不要在公开 issue 里粘贴私钥、RPC 密码或 API key。
 
 ## 当前状态

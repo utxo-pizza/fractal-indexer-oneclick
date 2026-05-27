@@ -44,7 +44,7 @@ snapshot height used by this package.
 Install `git` and `tmux` if needed, then clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_ORG/fractal-indexer-oneclick.git
+git clone https://github.com/EY-hungry/fractal-indexer-oneclick.git
 cd fractal-indexer-oneclick
 ```
 
@@ -104,6 +104,12 @@ bash scripts/deploy-menu.sh --validate-statehash
 # Full service health check
 bash scripts/deploy-menu.sh --health
 
+# Validate proof-publisher dry-run config
+bash scripts/deploy-menu.sh --validate-proof
+
+# Show the future operator registration checklist without broadcasting
+bash scripts/deploy-menu.sh --proof-registration-checklist
+
 # Internal script self-test for maintainers
 bash scripts/deploy-menu.sh --self-test
 ```
@@ -132,6 +138,12 @@ bash scripts/deploy-menu.sh --self-test
 - Internal datastore host ports are bound to `127.0.0.1` by default.
 - The proof publisher is generated with `dry_run=true` and
   `disable_broadcast=true`; real broadcasting needs a separate manual review.
+- Before official third-party operator registration opens, this project only
+  prepares registration config and dry-run validation. A future one-click
+  registration flow must still show the transaction, fee, inscription payload,
+  and require a second confirmation.
+- The menu and `--register-operator` reserve the one-click registration entry;
+  today it safely refuses execution and does not sign or broadcast.
 - Never paste private keys or API keys into public issues.
 
 ## Status

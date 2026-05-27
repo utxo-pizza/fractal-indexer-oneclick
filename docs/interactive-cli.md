@@ -116,6 +116,9 @@ server details.
 - `proof-publisher` is prepared with `runtime.dry_run=true` and
   `runtime.disable_broadcast=true`.
 - The menu does not start real transaction broadcasting automatically.
+- The future one-click operator registration entry is visible, but it safely
+  refuses execution until official third-party registration rules are public and
+  stable.
 - If proof-publisher startup is selected, the wizard checks the official image
   before restoring the snapshot or starting indexer services, then waits for its
   health endpoint before finishing.

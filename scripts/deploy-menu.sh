@@ -101,6 +101,18 @@ main() {
       health_check
       return 0
       ;;
+    --validate-proof)
+      validate_proof_publisher_config_file
+      return 0
+      ;;
+    --proof-registration-checklist)
+      proof_publisher_registration_checklist
+      return 0
+      ;;
+    --register-operator)
+      operator_registration_not_available
+      return 2
+      ;;
     "")
       ;;
     *)
@@ -195,6 +207,9 @@ Fractal Indexer 交互式部署菜单
   bash scripts/deploy-menu.sh --doctor
   bash scripts/deploy-menu.sh --self-test
   bash scripts/deploy-menu.sh --health
+  bash scripts/deploy-menu.sh --validate-proof
+  bash scripts/deploy-menu.sh --proof-registration-checklist
+  bash scripts/deploy-menu.sh --register-operator
 
 环境变量：
   DEPLOY_LANG=zh|en
@@ -218,7 +233,9 @@ Fractal Indexer 交互式部署菜单
   - 恢复官方 fractal-indexer 快照
   - 初始化并启动 fractal-indexer
   - 初始化并启动 stake-indexer
-  - 准备 proof-publisher dry-run 配置
+  - 一键配置/校验 proof-publisher dry-run
+  - 提供未来运营商注册 checklist，不自动真实广播
+  - 预留一键注册运营商入口；官方开放前安全拒绝执行
   - 查看健康检查、状态和日志
 EOF
   else
@@ -233,6 +250,9 @@ Usage:
   bash scripts/deploy-menu.sh --doctor
   bash scripts/deploy-menu.sh --self-test
   bash scripts/deploy-menu.sh --health
+  bash scripts/deploy-menu.sh --validate-proof
+  bash scripts/deploy-menu.sh --proof-registration-checklist
+  bash scripts/deploy-menu.sh --register-operator
 
 Environment:
   DEPLOY_LANG=zh|en
@@ -256,7 +276,9 @@ The interactive menu can:
   - restore the official fractal-indexer snapshot
   - initialize and start fractal-indexer
   - initialize and start stake-indexer
-  - prepare proof-publisher config in dry-run mode
+  - configure and validate proof-publisher dry-run in one pass
+  - show the future operator registration checklist without real broadcasting
+  - reserve one-click operator registration; safely refuse before official launch
   - show health checks, status, and logs
 EOF
   fi
@@ -275,7 +297,7 @@ menu_loop() {
 6) 恢复 fractal-indexer 快照（${SNAPSHOT_HEIGHT}）
 7) 初始化并启动 fractal-indexer
 8) 初始化并启动 stake-indexer
-9) 准备 proof-publisher dry-run 配置
+9) proof-publisher dry-run 配置/校验/注册准备
 10) 健康检查
 11) 查看 Docker Compose 状态
 12) 跟随日志
@@ -294,7 +316,7 @@ EOF
 6) Restore fractal-indexer snapshot (${SNAPSHOT_HEIGHT})
 7) Initialize and start fractal-indexer
 8) Initialize and start stake-indexer
-9) Prepare proof-publisher dry-run config
+9) proof-publisher dry-run setup / validation / registration prep
 10) Health checks
 11) Show Docker Compose status
 12) Follow logs
@@ -320,7 +342,7 @@ EOF
       6) restore_snapshot_interactive || option_status=$? ;;
       7) start_fractal_indexer || option_status=$? ;;
       8) start_stake_indexer || option_status=$? ;;
-      9) prepare_proof_publisher_config || option_status=$? ;;
+      9) proof_publisher_menu || option_status=$? ;;
       10) health_check || option_status=$? ;;
       11) compose_status || option_status=$? ;;
       12) follow_logs_menu || option_status=$? ;;
@@ -1106,7 +1128,7 @@ readiness_check() {
 }
 
 self_test() {
-  local failed=0 tmp actual fixture_dir helper_status helper_has_cr helper_ran old_fractal_dir
+  local failed=0 tmp actual fixture_dir helper_status helper_has_cr helper_ran old_fractal_dir old_proof_dir
   info_i "Running internal script self-tests" "运行脚本内部自测"
   line_i "This check is non-destructive. It does not use Docker, write configs, or contact Fractald." "这个检查不会改动部署状态，不使用 Docker、不写配置、不连接 Fractald。"
 
@@ -1130,6 +1152,7 @@ self_test() {
   self_test_assert_success "stake-indexer startup enforces pull failure" grep -Fq 'pull_compose_service "${STAKE_INDEXER_DIR}" "indexer" "stake-indexer" || return 1' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "proof-publisher start waits for health" grep -Fq 'wait_for_url "http://127.0.0.1:8080/healthz" "${CFG_WAIT_TIMEOUT}" || return 1' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "proof-publisher health is conditional" grep -Fq 'if [[ "${proof_required}" == "true" ]]; then' "${BASH_SOURCE[0]}" || failed=1
+  self_test_assert_success "operator registration command safely refuses before official launch" grep -Fq 'operator registration is not enabled yet' "${BASH_SOURCE[0]}" || failed=1
   local old_docker_cmd
   old_docker_cmd="$(declare -f docker_cmd)"
   docker_cmd() {
@@ -1205,6 +1228,27 @@ self_test() {
     error_i "proof-publisher scan start_height is not numeric: ${actual:-missing}" "proof-publisher scan start_height 不是数字：${actual:-缺失}"
     failed=1
   fi
+
+  fixture_dir="$(mktemp -d)" || return 1
+  mkdir -p "${fixture_dir}/proof-publisher" || {
+    rm -rf "${fixture_dir}"
+    return 1
+  }
+  cat >"${fixture_dir}/proof-publisher/config.json" <<'EOF'
+{
+  "bitcoin_rpc": {"url": "http://fractald:8332", "user": "bitcoinrpc", "password": "secret"},
+  "signing": {"private_key_wif": "Kx11111111111111111111111111111111111111111111111111", "change_address": "bc1pchange"},
+  "register": {"reward_addr": "bc1preward", "name": "test-indexer", "indexer_id": ""},
+  "runtime": {"unisat_open_api_key": "test-key", "dry_run": true, "disable_broadcast": true}
+}
+EOF
+  old_proof_dir="${PROOF_PUBLISHER_DIR}"
+  PROOF_PUBLISHER_DIR="${fixture_dir}/proof-publisher"
+  self_test_assert_success "proof-publisher config validator accepts dry-run safe config" validate_proof_publisher_config_file || failed=1
+  sed -i 's/"disable_broadcast": true/"disable_broadcast": false/' "${PROOF_PUBLISHER_DIR}/config.json" || failed=1
+  self_test_assert_failure "proof-publisher config validator rejects broadcast-enabled config" validate_proof_publisher_config_file || failed=1
+  PROOF_PUBLISHER_DIR="${old_proof_dir}"
+  rm -rf "${fixture_dir}"
 
   printf '{"code":0,"data":{"detail":[{"height":1760000,"blockHash":"000000000000000057410de57ea7a82ee3aba342d9b7d800d7de3ebb19a591d7","stateHash":"98a2b6ab8033323c031fcbda19a845c80f98c14551733b5b6a7e97c09edbbe0a"}]}}\n' >"${tmp}" || {
     rm -f "${tmp}"
@@ -1825,6 +1869,7 @@ collect_deployment_config() {
   if confirm_i "Prepare proof-publisher config in dry-run mode?" "是否准备 proof-publisher dry-run 配置？" "n"; then
     CFG_PREPARE_PROOF="true"
     collect_proof_config
+    validate_proof_config_globals || return 1
     if confirm_i "Start proof-publisher in dry-run mode after stake-indexer is ready?" "stake-indexer 就绪后是否启动 proof-publisher dry-run？" "n"; then
       CFG_START_PROOF="true"
     else
@@ -2090,6 +2135,57 @@ collect_proof_config() {
   CFG_PROOF_INDEXER_NAME="$(prompt_default_i "Indexer name" "索引器名称" "${CFG_PROOF_INDEXER_NAME:-REPLACE_INDEXER_NAME}")"
   CFG_PROOF_INDEXER_ID="$(prompt_default_i "Existing indexer id, empty before register" "已有 indexer_id，注册前可留空" "${CFG_PROOF_INDEXER_ID:-}")"
   CFG_PROOF_UNISAT_KEY="$(prompt_secret_i "UniSat Open API key or placeholder" "UniSat Open API key 或占位符" "${CFG_PROOF_UNISAT_KEY:-}")"
+}
+
+validate_proof_config_globals() {
+  local failed=0
+  info_i "Validating proof-publisher dry-run inputs" "验证 proof-publisher dry-run 输入"
+  require_proof_value "Fractald RPC URL" "Fractald RPC URL" "${CFG_PROOF_RPC_URL}" || failed=1
+  require_proof_value "Fractald RPC user" "Fractald RPC 用户名" "${CFG_PROOF_RPC_USER}" || failed=1
+  require_proof_value "Fractald RPC password" "Fractald RPC 密码" "${CFG_PROOF_RPC_PASSWORD}" || failed=1
+  require_proof_value "Indexer private key WIF" "索引器私钥 WIF" "${CFG_PROOF_PRIVATE_KEY}" || failed=1
+  require_proof_value "Change address" "找零地址" "${CFG_PROOF_CHANGE_ADDRESS}" || failed=1
+  require_proof_value "Reward address" "奖励地址" "${CFG_PROOF_REWARD_ADDRESS}" || failed=1
+  require_proof_value "Indexer name" "索引器名称" "${CFG_PROOF_INDEXER_NAME}" || failed=1
+  require_proof_value "UniSat Open API key" "UniSat Open API key" "${CFG_PROOF_UNISAT_KEY}" || failed=1
+  if [[ -n "${CFG_PROOF_INDEXER_ID}" ]] && value_is_placeholder "${CFG_PROOF_INDEXER_ID}"; then
+    error_i "Existing indexer id is still a placeholder. Leave it empty before official registration or set the real id after registration." "已有 indexer_id 仍是占位符。官方注册前请留空；注册后再填真实 id。"
+    failed=1
+  fi
+  if [[ "${failed}" -eq 0 ]]; then
+    line_i "OK   proof-publisher inputs are complete; generated config will still force dry_run=true and disable_broadcast=true" "OK   proof-publisher 输入完整；生成配置仍会强制 dry_run=true 且 disable_broadcast=true"
+  fi
+  return "${failed}"
+}
+
+require_proof_value() {
+  local en="$1"
+  local zh="$2"
+  local value="$3"
+  if [[ -z "${value}" || "${value}" =~ ^[[:space:]]*$ ]]; then
+    error_i "${en} is required." "${zh} 为必填项。"
+    return 1
+  fi
+  if value_is_placeholder "${value}"; then
+    error_i "${en} cannot be a placeholder." "${zh} 不能是占位符。"
+    return 1
+  fi
+  if [[ "${value}" =~ [[:space:]] ]]; then
+    error_i "${en} contains whitespace; check the value before continuing." "${zh} 包含空白字符，请确认后继续。"
+    return 1
+  fi
+}
+
+value_is_placeholder() {
+  local value="$1"
+  case "${value}" in
+    REPLACE_*|"<"*">"|YOUR_*|CHANGE_ME|TODO|TBD)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 print_deployment_plan() {
@@ -2918,6 +3014,7 @@ start_proof_publisher_dry_run() {
     error_i "Missing proof-publisher/config.json." "缺少 proof-publisher/config.json。"
     return 1
   fi
+  validate_proof_publisher_config_file || return 1
   validate_official_bundle || return 1
   ensure_compose_project_owned "${PROOF_PUBLISHER_DIR}" "proof-publisher" || return 1
   ensure_proof_publisher_image || return 1
@@ -2926,6 +3023,7 @@ start_proof_publisher_dry_run() {
   info_i "Starting proof-publisher in dry-run mode" "以 dry-run 模式启动 proof-publisher"
   compose "${PROOF_PUBLISHER_DIR}" up -d || return 1
   wait_for_url "http://127.0.0.1:8080/healthz" "${CFG_WAIT_TIMEOUT}" || return 1
+  wait_for_url "http://127.0.0.1:8080/status" "${CFG_WAIT_TIMEOUT}" || return 1
 }
 
 ensure_proof_publisher_image() {
@@ -3046,15 +3144,65 @@ wait_for_url() {
   done
 }
 
-prepare_proof_publisher_config() {
+proof_publisher_menu() {
+  while true; do
+    printf "\n"
+    info_i "proof-publisher dry-run and registration preparation" "proof-publisher dry-run 和注册准备"
+    if [[ "${UI_LANG}" == "zh" ]]; then
+      cat <<EOF
+1) 一键配置 proof-publisher dry-run（填写、校验、写入 config.json）
+2) 校验现有 proof-publisher/config.json
+3) 启动 proof-publisher dry-run 并检查 health/status
+4) 查看未来运营商注册 checklist（不广播）
+5) 一键注册运营商（官方开放后启用；当前安全拒绝）
+0) 返回主菜单
+EOF
+    else
+      cat <<EOF
+1) One-click proof-publisher dry-run setup (collect, validate, write config.json)
+2) Validate existing proof-publisher/config.json
+3) Start proof-publisher dry-run and check health/status
+4) Show future operator registration checklist (no broadcast)
+5) One-click operator registration (enabled after official launch; safely refuses now)
+0) Back to main menu
+EOF
+    fi
+    local choice
+    read -r -p "$(choose_text "Select an option" "请选择"): " choice
+    case "${choice}" in
+      1) proof_publisher_one_click_setup ;;
+      2) validate_proof_publisher_config_file ;;
+      3) start_proof_publisher_dry_run ;;
+      4) proof_publisher_registration_checklist ;;
+      5) operator_registration_not_available || true ;;
+      0) return 0 ;;
+      *) warn_i "Unknown option: ${choice}" "未知选项：${choice}" ;;
+    esac
+    pause
+  done
+}
+
+proof_publisher_one_click_setup() {
   info_i "Preparing proof-publisher dry-run config" "准备 proof-publisher dry-run 配置"
+  warn_i "This flow never enables real broadcasting. It writes dry_run=true and disable_broadcast=true." "这个流程不会启用真实广播。它会写入 dry_run=true 和 disable_broadcast=true。"
   collect_proof_config
-  write_proof_publisher_config_from_globals
+  validate_proof_config_globals || return 1
+  write_proof_publisher_config_from_globals || return 1
+  validate_proof_publisher_config_file || return 1
+  proof_publisher_registration_checklist
+  if confirm_i "Start proof-publisher dry-run now and check health/status?" "现在启动 proof-publisher dry-run 并检查 health/status？" "n"; then
+    start_proof_publisher_dry_run
+  fi
+}
+
+prepare_proof_publisher_config() {
+  proof_publisher_one_click_setup
 }
 
 write_proof_publisher_config_from_globals() {
   local path="${PROOF_PUBLISHER_DIR}/config.json"
   local scan_start_height scan_poll_interval scan_target_block_version scan_confirmations scan_reorg_depth
+  validate_proof_config_globals || return 1
   scan_start_height="$(proof_config_number "start_height" "1764000")"
   scan_poll_interval="$(proof_config_number "poll_interval" "30000000000")"
   scan_target_block_version="$(proof_config_number "target_block_version" "539361536")"
@@ -3122,6 +3270,101 @@ EOF
   info_i "Wrote proof-publisher/config.json with dry_run=true and disable_broadcast=true" "已写入 proof-publisher/config.json，且 dry_run=true、disable_broadcast=true"
 }
 
+validate_proof_publisher_config_file() {
+  local path="${PROOF_PUBLISHER_DIR}/config.json"
+  local failed=0
+  info_i "Validating proof-publisher/config.json" "校验 proof-publisher/config.json"
+  if [[ ! -f "${path}" ]]; then
+    error_i "Missing proof-publisher/config.json. Run proof-publisher setup first." "缺少 proof-publisher/config.json。请先运行 proof-publisher 配置。"
+    return 1
+  fi
+  require_json_true "${path}" "dry_run" || failed=1
+  require_json_true "${path}" "disable_broadcast" || failed=1
+  require_json_nonempty_string "${path}" "url" || failed=1
+  require_json_nonempty_string "${path}" "user" || failed=1
+  require_json_nonempty_string "${path}" "password" || failed=1
+  require_json_nonempty_string "${path}" "private_key_wif" || failed=1
+  require_json_nonempty_string "${path}" "change_address" || failed=1
+  require_json_nonempty_string "${path}" "reward_addr" || failed=1
+  require_json_nonempty_string "${path}" "name" || failed=1
+  require_json_nonempty_string "${path}" "unisat_open_api_key" || failed=1
+  if grep -q 'REPLACE_' "${path}"; then
+    error_i "proof-publisher/config.json still contains REPLACE_ placeholders." "proof-publisher/config.json 仍包含 REPLACE_ 占位符。"
+    failed=1
+  fi
+  if [[ "${failed}" -eq 0 ]]; then
+    line_i "OK   proof-publisher config is complete and broadcast-safe for dry-run" "OK   proof-publisher 配置完整，并保持 dry-run 广播安全"
+  fi
+  return "${failed}"
+}
+
+require_json_true() {
+  local path="$1"
+  local key="$2"
+  if grep -Eq "\"${key}\"[[:space:]]*:[[:space:]]*true([,[:space:]}]|$)" "${path}"; then
+    printf "OK   %s=true\n" "${key}"
+    return 0
+  fi
+  error_i "proof-publisher/config.json must set ${key}=true." "proof-publisher/config.json 必须设置 ${key}=true。"
+  return 1
+}
+
+require_json_nonempty_string() {
+  local path="$1"
+  local key="$2"
+  if grep -Eq "\"${key}\"[[:space:]]*:[[:space:]]*\"[^\"]+\"" "${path}"; then
+    printf "OK   %s is set\n" "${key}"
+    return 0
+  fi
+  error_i "proof-publisher/config.json must set a non-empty ${key} string." "proof-publisher/config.json 必须设置非空 ${key} 字符串。"
+  return 1
+}
+
+proof_publisher_registration_checklist() {
+  info_i "Future operator registration checklist" "未来运营商注册 checklist"
+  if [[ "${UI_LANG}" == "zh" ]]; then
+    cat <<EOF
+当前版本只做 dry-run 准备，不自动真实注册或广播。
+
+等官方开放第三方服务商注册后，正式注册流程应至少包含：
+  1. 确认 portal 已开放第三方 indexer 注册。
+  2. 校验 owner/change 地址余额和可用 UTXO。
+  3. 校验 owner 地址、reward 地址、indexer name、indexer_id。
+  4. dry-run 生成 register_indexer / submit_proof 任务。
+  5. 展示将要广播的交易、手续费、铭文内容和风险提示。
+  6. 用户二次确认后才允许真实广播。
+  7. 记录 txid、indexer_id、广播状态和后续 proof 状态。
+
+本菜单预留此入口，但不会在官方规则明确前实现真实广播。
+EOF
+  else
+    cat <<EOF
+This version prepares dry-run only. It does not perform real registration or
+broadcast transactions.
+
+When official third-party indexer registration opens, a production registration
+flow should include at least:
+  1. Confirm the portal allows third-party indexer registration.
+  2. Check owner/change address balance and spendable UTXOs.
+  3. Validate owner address, reward address, indexer name, and indexer_id.
+  4. Dry-run register_indexer / submit_proof task generation.
+  5. Show the transaction, fee, inscription payload, and risk notice.
+  6. Require explicit second confirmation before real broadcast.
+  7. Record txid, indexer_id, broadcast state, and future proof state.
+
+This menu reserves the entry point but does not implement real broadcasting
+before the official rules are clear.
+EOF
+  fi
+}
+
+operator_registration_not_available() {
+  error_i "One-click operator registration is not enabled yet." "一键注册运营商尚未启用。"
+  warn_i "This package intentionally refuses real registration and broadcasting until the official third-party operator rules are public and stable." "在官方第三方运营商规则公开并稳定前，本项目会拒绝真实注册和广播。"
+  proof_publisher_registration_checklist
+  return 2
+}
+
 json_escape() {
   local value="$1"
   value="${value//\\/\\\\}"
@@ -3161,6 +3404,11 @@ health_check() {
     report_compose_container_issues "${PROOF_PUBLISHER_DIR}" "proof-publisher" || failed=1
   else
     report_compose_container_issues "${PROOF_PUBLISHER_DIR}" "proof-publisher" || true
+  fi
+  if [[ -f "${PROOF_PUBLISHER_DIR}/config.json" ]]; then
+    validate_proof_publisher_config_file || failed=1
+  else
+    line_i "proof-publisher config: not prepared" "proof-publisher 配置：尚未准备"
   fi
   check_internal_datastore_bindings || failed=1
   printf "\n"

@@ -1,21 +1,21 @@
 # Repository Setup
 
-Before publishing, replace the example GitHub owner in docs:
+This published repository uses:
 
 ```bash
-grep -R "YOUR_ORG" -n README.md README.zh-CN.md docs
+https://github.com/EY-hungry/fractal-indexer-oneclick
 ```
 
-Example replacement:
+Before publishing a fork, replace the owner in docs:
 
 ```bash
-perl -pi -e 's/YOUR_ORG/<your-github-owner>/g' README.md README.zh-CN.md docs/*.md
+perl -pi -e 's/EY-hungry/<your-github-owner>/g' README.md README.zh-CN.md docs/*.md
 ```
 
 Then create the remote repository and push:
 
 ```bash
-git remote add origin https://github.com/<your-github-owner>/fractal-indexer-oneclick.git
+git remote add origin https://github.com/EY-hungry/fractal-indexer-oneclick.git
 git push -u origin main
 ```
 
