@@ -1,0 +1,16 @@
+chain_type: Fractal
+skip_missing_utxo: false
+
+zmq_block: "tcp://fractald:10330"
+zmq_tx: "tcp://fractald:10331"
+rpc: "http://fractald:8332"
+rpc_auth: "" # user:password
+
+
+utxo_pika_batch: 1024
+
+jubilee_activation_height: 21000
+ordinals_activation_height: 21000
+reinscription_activation_height: 21000
+brc20_single_step_transfer_height: 930930
+

@@ -1,0 +1,23 @@
+.DS_Store
+
+# Local configs and runtime data
+config.json
+*/config.json
+*/docker-compose.override.yaml
+*/docker-compose.menu.yaml
+fractal-indexer/conf/indexer/chain.yaml
+stake-indexer/conf/indexer/chain.yaml
+fractal-indexer/conf/indexer/chain.yaml.bak.*
+stake-indexer/conf/indexer/chain.yaml.bak.*
+proof-publisher/config.json.bak.*
+*/config.json.bak.*
+fractal-indexer/data.backup.*/
+fractal-indexer/data.restore.*/
+*/data/
+*/logs/
+logs/
+
+# Local tooling
+.ace-tool/
+.vscode/
+.idea/

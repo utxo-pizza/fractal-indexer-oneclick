@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a deployment or menu problem
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Remove all secrets before posting logs or configs.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the deployment step and the observed result.
+    validations:
+      required: true
+  - type: textarea
+    id: commands
+    attributes:
+      label: Commands run
+      description: Paste the commands you ran.
+      render: bash
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs
+      description: Remove RPC passwords, private keys, API keys, and IPs if needed.
+      render: text
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: Debian 12, Ubuntu 22.04, etc.
+  - type: input
+    id: docker
+    attributes:
+      label: Docker / Compose version
+      placeholder: docker --version; docker compose version
