@@ -4,11 +4,12 @@
 
 1. 确认 Fractald 已同步或可用。
 2. 确认 RPC 和 ZMQ 已启用。
-3. 用 `scripts/run-menu-persistent.sh` 启动菜单。
-4. 先跑菜单 `15` 或 `--doctor` 做非破坏性诊断。
-5. 跑菜单 `1` 一条路部署。
-6. 如果 SSH 断开，用 `tmux attach -t fractal-indexer-oneclick` 恢复。
-7. 跑 `bash scripts/deploy-menu.sh --health` 检查服务。
+3. 对照 [配置需求说明](CONFIGURATION.zh-CN.md) 确认容器内可访问的 RPC/ZMQ 地址。
+4. 用 `scripts/run-menu-persistent.sh` 启动菜单。
+5. 先跑菜单 `15` 或 `--doctor` 做非破坏性诊断。
+6. 跑菜单 `1` 一条路部署。
+7. 如果 SSH 断开，用 `tmux attach -t fractal-indexer-oneclick` 恢复。
+8. 跑 `bash scripts/deploy-menu.sh --health` 检查服务。
 
 ## 服务启动顺序
 

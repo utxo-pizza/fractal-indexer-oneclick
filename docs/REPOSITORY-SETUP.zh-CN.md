@@ -3,19 +3,19 @@
 当前发布仓库使用：
 
 ```bash
-https://github.com/EY-hungry/fractal-indexer-oneclick
+https://github.com/utxo-pizza/fractal-indexer-oneclick
 ```
 
 如果发布 fork，再替换文档里的 owner：
 
 ```bash
-perl -pi -e 's/EY-hungry/<your-github-owner>/g' README.md README.zh-CN.md docs/*.md
+perl -pi -e 's/utxo-pizza/<your-github-owner>/g' README.md README.zh-CN.md docs/*.md
 ```
 
 然后创建 GitHub 远程仓库并推送：
 
 ```bash
-git remote add origin https://github.com/EY-hungry/fractal-indexer-oneclick.git
+git remote add origin https://github.com/utxo-pizza/fractal-indexer-oneclick.git
 git push -u origin main
 ```
 

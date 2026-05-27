@@ -33,7 +33,7 @@ Confirm no runtime files are present:
 git add .
 git commit -m "Initial standalone Fractal indexer one-click package"
 git branch -M main
-git remote add origin https://github.com/EY-hungry/fractal-indexer-oneclick.git
+git remote add origin https://github.com/utxo-pizza/fractal-indexer-oneclick.git
 git push -u origin main
 ```
 

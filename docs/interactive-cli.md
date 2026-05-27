@@ -307,6 +307,9 @@ The automatic flow is:
 
 ## Fractald Connectivity
 
+For a complete checklist of required Fractald, wallet, port, and generated-file
+settings, read [Configuration Requirements](CONFIGURATION.en.md).
+
 The default prompts assume Fractald runs on the Docker host and is reachable from
 containers through Compose `host-gateway` aliases:
 

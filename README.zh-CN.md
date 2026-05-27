@@ -21,6 +21,8 @@ Fractald 节点，然后用交互式菜单部署官方 `fractal-indexer`、
 
 ## 前置条件
 
+完整填写说明见 [配置需求说明](docs/CONFIGURATION.zh-CN.md)。
+
 - Linux 服务器。
 - 已经同步好或可用的 Fractald 节点。
 - Fractald RPC 能被 Docker 容器访问。
@@ -37,7 +39,7 @@ Fractald 节点，然后用交互式菜单部署官方 `fractal-indexer`、
 先安装 `git` 和 `tmux`，然后克隆项目：
 
 ```bash
-git clone https://github.com/EY-hungry/fractal-indexer-oneclick.git
+git clone https://github.com/utxo-pizza/fractal-indexer-oneclick.git
 cd fractal-indexer-oneclick
 ```
 
@@ -111,6 +113,8 @@ bash scripts/deploy-menu.sh --self-test
 
 - [中文快速开始](docs/QUICKSTART.zh-CN.md)
 - [English quick start](docs/QUICKSTART.en.md)
+- [中文配置需求说明](docs/CONFIGURATION.zh-CN.md)
+- [Configuration requirements](docs/CONFIGURATION.en.md)
 - [中文运维指南](docs/OPERATIONS.zh-CN.md)
 - [Operations guide](docs/OPERATIONS.en.md)
 - [中文故障排查](docs/TROUBLESHOOTING.zh-CN.md)

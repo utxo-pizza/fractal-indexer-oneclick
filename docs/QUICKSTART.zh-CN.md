@@ -2,6 +2,9 @@
 
 本指南适用于服务器上已经有可用 Fractald 节点的情况。
 
+开始前请先读一遍 [配置需求说明](CONFIGURATION.zh-CN.md)。如果 Fractald 的
+RPC/ZMQ 没有被 Docker 容器访问到，后续快照和索引器启动都会失败。
+
 ## 1. 准备不死终端
 
 先安装 `tmux`：
@@ -16,7 +19,7 @@ sudo apt-get install -y git tmux
 ## 2. 克隆项目
 
 ```bash
-git clone https://github.com/EY-hungry/fractal-indexer-oneclick.git
+git clone https://github.com/utxo-pizza/fractal-indexer-oneclick.git
 cd fractal-indexer-oneclick
 ```
 
@@ -44,6 +47,14 @@ tmux attach -t fractal-indexer-oneclick
 - RPC 用户名和密码。
 - 是否恢复官方快照。
 - 是否准备可选的 proof-publisher dry-run 配置。
+
+不确定某一项怎么填时，先运行：
+
+```bash
+bash scripts/deploy-menu.sh --doctor
+```
+
+它不会写配置、恢复快照或启动服务，只做环境和 Fractald 可用性诊断。
 
 ## 5. 验证
 

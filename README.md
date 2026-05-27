@@ -25,6 +25,9 @@ patched service images.
 
 ## Requirements
 
+See [Configuration Requirements](docs/CONFIGURATION.en.md) for the full field
+reference.
+
 - Linux server with an already synced or usable Fractald node.
 - Fractald RPC reachable from Docker containers.
 - Fractald ZMQ block and transaction endpoints.
@@ -44,7 +47,7 @@ snapshot height used by this package.
 Install `git` and `tmux` if needed, then clone the repository:
 
 ```bash
-git clone https://github.com/EY-hungry/fractal-indexer-oneclick.git
+git clone https://github.com/utxo-pizza/fractal-indexer-oneclick.git
 cd fractal-indexer-oneclick
 ```
 
@@ -118,6 +121,8 @@ bash scripts/deploy-menu.sh --self-test
 
 - [English quick start](docs/QUICKSTART.en.md)
 - [Chinese quick start](docs/QUICKSTART.zh-CN.md)
+- [Configuration requirements](docs/CONFIGURATION.en.md)
+- [中文配置需求说明](docs/CONFIGURATION.zh-CN.md)
 - [Operations guide](docs/OPERATIONS.en.md)
 - [中文运维指南](docs/OPERATIONS.zh-CN.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.en.md)

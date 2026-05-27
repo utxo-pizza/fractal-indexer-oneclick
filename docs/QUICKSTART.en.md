@@ -2,6 +2,10 @@
 
 Use this guide when Fractald is already installed and reachable on the server.
 
+Before starting, read [Configuration Requirements](CONFIGURATION.en.md). If
+Fractald RPC/ZMQ is not reachable from Docker containers, snapshot restore and
+indexer startup will fail later.
+
 ## 1. Prepare a Persistent Shell
 
 Install `tmux` first:
@@ -17,7 +21,7 @@ menu can also install common missing dependencies later.
 ## 2. Clone
 
 ```bash
-git clone https://github.com/EY-hungry/fractal-indexer-oneclick.git
+git clone https://github.com/utxo-pizza/fractal-indexer-oneclick.git
 cd fractal-indexer-oneclick
 ```
 
@@ -45,6 +49,15 @@ You will be asked for:
 - RPC user and password.
 - Whether to restore the official snapshot.
 - Whether to prepare optional proof-publisher dry-run config.
+
+If you are unsure about any value, run:
+
+```bash
+bash scripts/deploy-menu.sh --doctor
+```
+
+It does not write configs, restore snapshots, or start services. It only checks
+environment readiness and Fractald reachability.
 
 ## 5. Verify
 
