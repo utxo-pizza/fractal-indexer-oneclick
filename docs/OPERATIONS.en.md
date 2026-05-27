@@ -12,8 +12,10 @@
 6. Run option `16` or `--doctor` for a non-destructive readiness report.
 7. Run option `1` for beginner mode, or option `2` for the advanced one-pass
    wizard.
-8. Reattach with `tmux attach -t fractal-indexer-oneclick` if SSH disconnects.
-9. Run `bash scripts/deploy-menu.sh --health`.
+8. Use option `17` or `bash scripts/qa-helper.sh` when an operator question or
+   safety warning needs a guided check/remediation path.
+9. Reattach with `tmux attach -t fractal-indexer-oneclick` if SSH disconnects.
+10. Run `bash scripts/deploy-menu.sh --health`.
 
 ## Service Order
 

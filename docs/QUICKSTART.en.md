@@ -71,6 +71,7 @@ If you are unsure about any value, run:
 
 ```bash
 bash scripts/deploy-menu.sh --doctor
+bash scripts/qa-helper.sh --check-all
 ```
 
 It does not write configs, restore snapshots, or start services. It only checks

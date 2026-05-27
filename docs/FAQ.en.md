@@ -1,5 +1,8 @@
 # FAQ
 
+For longer operator answers backed by a runnable diagnosis/remediation helper,
+see [Operator Q&A And Script Helper](QA.en.md).
+
 ## Does this install Fractald?
 
 No. This first package only deploys the indexer stack. Fractald installation,
@@ -60,3 +63,15 @@ snapshot. The menu checks `pruneheight` and required block access before startup
 Only if you deliberately protect it. Internal datastore ports are localhost-only
 by default, but public API ports follow upstream Compose behavior. Use firewall
 or reverse proxy rules.
+
+## How do I quickly check whether Fractald RPC is exposed?
+
+Run:
+
+```bash
+DEPLOY_LANG=en bash scripts/qa-helper.sh --check rpc-exposure
+```
+
+If you see `0.0.0.0:*` or `[::]:*`, verify firewall rules before continuing.
+The helper-supported remediation path is in
+[Operator Q&A And Script Helper](QA.en.md).

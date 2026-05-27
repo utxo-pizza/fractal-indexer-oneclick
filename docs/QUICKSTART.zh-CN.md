@@ -67,6 +67,7 @@ tmux attach -t fractal-indexer-oneclick
 
 ```bash
 bash scripts/deploy-menu.sh --doctor
+DEPLOY_LANG=zh bash scripts/qa-helper.sh --check-all
 ```
 
 它不会写配置、恢复快照或启动服务，只做环境和 Fractald 可用性诊断。

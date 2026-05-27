@@ -31,8 +31,11 @@ bash scripts/deploy-menu.sh --validate-rpc
 bash scripts/deploy-menu.sh --validate-statehash
 bash scripts/deploy-menu.sh --doctor
 bash scripts/deploy-menu.sh --beginner
+bash scripts/deploy-menu.sh --install-deps
 bash scripts/deploy-menu.sh --self-test
 bash scripts/deploy-menu.sh --health
+bash scripts/qa-helper.sh
+bash scripts/qa-helper.sh --check-all
 ```
 
 ## What The Menu Does
@@ -58,6 +61,8 @@ bash scripts/deploy-menu.sh --health
   `bash scripts/deploy-menu.sh --doctor`
 - includes a non-destructive internal helper self-test for maintainers as
   `bash scripts/deploy-menu.sh --self-test`
+- exposes option `17` as the bilingual Q&A diagnosis/remediation helper, also
+  available directly as `bash scripts/qa-helper.sh`
 - checks pruned Fractald nodes still retain the snapshot height before using
   the official snapshot
 - fetches or fast-forwards the official `fractal-indexer-deploy` bundle under
@@ -375,7 +380,8 @@ the operator confirm or replace every detected value.
 
 If the detected RPC or ZMQ bind address is loopback-only, the menu prints a
 warning. In that case, Fractald may need to also listen on the Docker bridge or
-`0.0.0.0`, with an appropriate `rpcallowip`, before containers can reach it.
+another private host address, with an appropriate `rpcallowip`, before
+containers can reach it. Do not expose Fractald RPC/ZMQ on a public interface.
 
 During the automatic flow, the wizard runs a JSON-RPC `getblockchaininfo` check
 from inside a Docker container. This catches wrong ports such as `10332` vs
@@ -414,6 +420,7 @@ or starting services:
 
 ```bash
 bash scripts/deploy-menu.sh --doctor
+bash scripts/qa-helper.sh --check-all
 ```
 
 ## Official Deploy Bundle

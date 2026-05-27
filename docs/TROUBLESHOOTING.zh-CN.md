@@ -35,6 +35,14 @@ bash scripts/deploy-menu.sh --validate-rpc
 - 缺少允许 Docker bridge 访问的 `rpcallowip`。
 - 剪枝节点无法提供快照高度或奖励起点高度所需区块。
 
+如果你为了让 Docker 访问而调整了 Fractald 监听地址，要确认它没有暴露到公网：
+
+```bash
+DEPLOY_LANG=zh bash scripts/qa-helper.sh --check rpc-exposure
+```
+
+公网暴露检查和助手支持的处理动作见 [运营商 Q&A 与脚本助手](QA.zh-CN.md)。
+
 ## Statehash 没好
 
 运行：

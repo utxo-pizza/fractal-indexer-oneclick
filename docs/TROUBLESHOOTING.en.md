@@ -36,6 +36,16 @@ Common causes:
 - missing `rpcallowip` for Docker bridge access
 - pruned node cannot serve the required snapshot or reward-start block
 
+If you changed Fractald to listen beyond localhost, make sure it did not become
+publicly reachable:
+
+```bash
+DEPLOY_LANG=en bash scripts/qa-helper.sh --check rpc-exposure
+```
+
+For public exposure checks and helper-supported remediations, see
+[Operator Q&A And Script Helper](QA.en.md).
+
 ## Statehash Is Not Ready
 
 Run:

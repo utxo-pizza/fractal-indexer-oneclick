@@ -97,6 +97,12 @@ bash scripts/deploy-menu.sh
 # 非破坏性一条路部署诊断
 bash scripts/deploy-menu.sh --doctor
 
+# 交互式 Q&A 检查/处理助手
+bash scripts/qa-helper.sh
+
+# 一次运行常见只读 Q&A 检查
+DEPLOY_LANG=zh bash scripts/qa-helper.sh --check-all
+
 # 直接启动极简小白模式
 bash scripts/deploy-menu.sh --beginner
 
@@ -141,6 +147,8 @@ bash scripts/deploy-menu.sh --self-test
 - [Troubleshooting](docs/TROUBLESHOOTING.en.md)
 - [中文 FAQ](docs/FAQ.zh-CN.md)
 - [FAQ](docs/FAQ.en.md)
+- [运营商 Q&A](docs/QA.zh-CN.md)
+- [Operator Q&A](docs/QA.en.md)
 - [中文发布清单](docs/PUBLISHING.zh-CN.md)
 - [Publishing checklist](docs/PUBLISHING.en.md)
 - [中文仓库发布设置](docs/REPOSITORY-SETUP.zh-CN.md)
@@ -153,6 +161,14 @@ bash scripts/deploy-menu.sh --self-test
 - 不要把 Fractald RPC 暴露到公网。
 - RPC 密码必须随机且足够长。
 - 内部数据库端口默认只绑定 `127.0.0.1`。
+- 用 `sudo ss -lntp | grep -E ':(8332|10332|10330|10331)\b' || true`
+  检查 Fractald RPC/ZMQ 监听情况。
+- 用 `DEPLOY_LANG=zh bash scripts/qa-helper.sh --check rpc-exposure` 检查；
+  支持的处理动作见 [运营商 Q&A 与脚本助手](docs/QA.zh-CN.md)。
+- 用 `DEPLOY_LANG=zh bash scripts/qa-helper.sh --check api-exposure`
+  检查 API/数据库端口暴露。
+- 用 `DEPLOY_LANG=zh bash scripts/qa-helper.sh --check secrets`
+  检查是否误跟踪敏感配置。
 - `proof-publisher` 默认生成 `dry_run=true` 和 `disable_broadcast=true`；
   真实广播必须单独人工复核。
 - 第三方运营商注册开放前，本项目只做注册配置准备和 dry-run 校验；未来加入

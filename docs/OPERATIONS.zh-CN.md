@@ -9,8 +9,10 @@
 5. 用 `scripts/run-menu-persistent.sh` 启动菜单。
 6. 先跑菜单 `16` 或 `--doctor` 做非破坏性诊断。
 7. 跑菜单 `1` 极简小白模式；需要完整自定义时跑菜单 `2` 高级一条路部署。
-8. 如果 SSH 断开，用 `tmux attach -t fractal-indexer-oneclick` 恢复。
-9. 跑 `bash scripts/deploy-menu.sh --health` 检查服务。
+8. 遇到运营问题或安全提醒时，用菜单 `17` 或 `bash scripts/qa-helper.sh` 进入可执行
+   Q&A 检查/处理路径。
+9. 如果 SSH 断开，用 `tmux attach -t fractal-indexer-oneclick` 恢复。
+10. 跑 `bash scripts/deploy-menu.sh --health` 检查服务。
 
 ## 服务启动顺序
 

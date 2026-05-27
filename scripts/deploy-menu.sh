@@ -84,6 +84,10 @@ main() {
       self_test
       return 0
       ;;
+    --install-deps)
+      install_missing_dependencies
+      return 0
+      ;;
     --sync-official)
       ensure_official_deploy_bundle "force"
       return 0
@@ -230,6 +234,7 @@ Fractal Indexer 交互式部署菜单
   bash scripts/deploy-menu.sh --validate-statehash
   bash scripts/deploy-menu.sh --doctor
   bash scripts/deploy-menu.sh --beginner
+  bash scripts/deploy-menu.sh --install-deps
   bash scripts/deploy-menu.sh --self-test
   bash scripts/deploy-menu.sh --sync-official
   bash scripts/deploy-menu.sh --official-status
@@ -282,6 +287,7 @@ Usage:
   bash scripts/deploy-menu.sh --validate-statehash
   bash scripts/deploy-menu.sh --doctor
   bash scripts/deploy-menu.sh --beginner
+  bash scripts/deploy-menu.sh --install-deps
   bash scripts/deploy-menu.sh --self-test
   bash scripts/deploy-menu.sh --sync-official
   bash scripts/deploy-menu.sh --official-status
@@ -347,6 +353,7 @@ menu_loop() {
 14) 停止服务
 15) 切换语言
 16) 默认一条路部署诊断
+17) Q&A 问题检查/处理助手
 0) 退出
 EOF
     else
@@ -367,6 +374,7 @@ EOF
 14) Stop services
 15) Switch language
 16) Default one-pass deployment readiness report
+17) Q&A diagnosis/remediation helper
 0) Exit
 EOF
     fi
@@ -394,6 +402,7 @@ EOF
       14) stop_services_menu || option_status=$? ;;
       15) UI_LANG=""; select_language || option_status=$? ;;
       16) readiness_check || option_status=$? ;;
+      17) DEPLOY_LANG="${UI_LANG}" bash "${ROOT_DIR}/scripts/qa-helper.sh" || option_status=$? ;;
       0) exit 0 ;;
       *) warn_i "Unknown option: ${choice}" "未知选项：${choice}" ;;
     esac
@@ -468,6 +477,20 @@ ensure_official_deploy_bundle_locked() {
   local mode="${1:-auto}"
   local parent head
   parent="$(dirname "${DEPLOY_BUNDLE_DIR}")"
+  if [[ "${QA_READ_ONLY:-false}" == "true" ]]; then
+    if [[ ! -d "${DEPLOY_BUNDLE_DIR}/.git" ]]; then
+      error_i "Read-only check needs an existing official deploy bundle. Run --sync-official first." "只读检查需要已有官方部署包。请先运行 --sync-official。"
+      return 1
+    fi
+    if ! is_official_repo "${DEPLOY_BUNDLE_DIR}" "${OFFICIAL_DEPLOY_REPO}"; then
+      error_i "Existing deploy bundle is not the configured official repository: ${DEPLOY_BUNDLE_DIR}" "现有部署包不是配置的官方仓库：${DEPLOY_BUNDLE_DIR}"
+      return 1
+    fi
+    require_official_deploy_files || return 1
+    head="$(git -C "${DEPLOY_BUNDLE_DIR}" rev-parse --short HEAD 2>/dev/null || printf "unknown")"
+    line_i "OK   using existing official deploy bundle in read-only mode: ${DEPLOY_BUNDLE_DIR} (${head})" "OK   只读使用已有官方部署包：${DEPLOY_BUNDLE_DIR}（${head}）"
+    return 0
+  fi
   if [[ -d "${DEPLOY_BUNDLE_DIR}/.git" ]]; then
     if ! is_official_repo "${DEPLOY_BUNDLE_DIR}" "${OFFICIAL_DEPLOY_REPO}"; then
       error_i "Existing deploy bundle is not the configured official repository: ${DEPLOY_BUNDLE_DIR}" "现有部署包不是配置的官方仓库：${DEPLOY_BUNDLE_DIR}"
@@ -577,7 +600,9 @@ official_deploy_bundle_status() {
     warn_i "Official deploy bundle is not cloned yet: ${DEPLOY_BUNDLE_DIR}" "官方部署包尚未克隆：${DEPLOY_BUNDLE_DIR}"
     return 1
   fi
-  install_official_deploy_excludes || return 1
+  if [[ "${QA_READ_ONLY:-false}" != "true" ]]; then
+    install_official_deploy_excludes || return 1
+  fi
   git -C "${DEPLOY_BUNDLE_DIR}" remote -v
   git -C "${DEPLOY_BUNDLE_DIR}" status --short --branch
   git -C "${DEPLOY_BUNDLE_DIR}" log --oneline -3
@@ -1108,7 +1133,7 @@ print_fractald_detection_summary() {
     printf "  RPC user: %s\n" "${CFG_RPC_USER:-<unknown>}"
     printf "  RPC password: %s\n" "$(mask_secret "${CFG_RPC_PASSWORD:-}")"
     if [[ "${CFG_FRACTALD_LOOPBACK_WARN}" == "true" ]]; then
-      warn_i "Detected RPC/ZMQ loopback bind. Containers may not reach Fractald through host-gateway unless Fractald also listens on the Docker bridge or 0.0.0.0." "检测到 RPC/ZMQ 绑定在本机回环地址。除非 Fractald 同时监听 Docker bridge 或 0.0.0.0，否则容器可能无法通过 host-gateway 访问 Fractald。"
+      warn_i "Detected RPC/ZMQ loopback bind. Containers may not reach Fractald through host-gateway unless Fractald also listens on the Docker bridge or another private host address." "检测到 RPC/ZMQ 绑定在本机回环地址。除非 Fractald 同时监听 Docker bridge 或其他宿主机私有地址，否则容器可能无法通过 host-gateway 访问 Fractald。"
     fi
   else
     line_i "  Not detected. The wizard will use standard defaults and ask you to confirm them." "  未识别到。向导会使用标准默认值，并让你确认。"
@@ -1359,6 +1384,8 @@ self_test() {
   self_test_assert_success "proof-publisher health is conditional" grep -Fq 'if [[ "${proof_required}" == "true" ]]; then' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "operator registration command safely refuses before official launch" grep -Fq 'operator registration is not enabled yet' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "official deploy bundle lock is cleaned on process exit" grep -Fq 'trap release_official_deploy_lock EXIT' "${BASH_SOURCE[0]}" || failed=1
+  self_test_assert_success "Q&A delegated checks support read-only official bundle mode" grep -Fq 'QA_READ_ONLY:-false' "${BASH_SOURCE[0]}" || failed=1
+  self_test_assert_success "Q&A helper exposure checks pass" bash "${ROOT_DIR}/scripts/qa-helper.sh" --self-test || failed=1
   self_test_assert_success "beginner mode CLI command is documented" grep -Fq -- '--beginner' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "beginner mode is the first menu option" grep -Fq '1) Beginner mode: diagnose Fractald, then deploy with safe defaults' "${BASH_SOURCE[0]}" || failed=1
   set_beginner_defaults
@@ -2637,7 +2664,7 @@ validate_fractald_rpc_for_deployment() {
   if ! run_rpc_probe "${tmp_dir}" "${config_file}" "${output_file}" "getblockchaininfo" "[]"; then
     rm -rf "${tmp_dir}"
     if [[ "${CFG_FRACTALD_LOOPBACK_WARN}" == "true" ]]; then
-      warn_i "Detected Fractald loopback-only RPC/ZMQ config. Add a Docker bridge rpcbind/rpcallowip and ZMQ bind, then restart Fractald. Example: rpcbind=172.17.0.1, rpcallowip=172.16.0.0/12, zmqpubrawblock=tcp://172.17.0.1:10330, zmqpubrawtx=tcp://172.17.0.1:10331." "检测到 Fractald RPC/ZMQ 仅绑定本机回环。请增加 Docker bridge 的 rpcbind/rpcallowip 和 ZMQ 绑定后重启 Fractald。例如：rpcbind=172.17.0.1、rpcallowip=172.16.0.0/12、zmqpubrawblock=tcp://172.17.0.1:10330、zmqpubrawtx=tcp://172.17.0.1:10331。"
+      warn_i "Detected Fractald loopback-only RPC/ZMQ config. Add a Docker bridge rpcbind/rpcallowip and ZMQ bind, then restart Fractald. Bind to the actual Docker bridge address and allow only the confirmed container-network CIDR; do not bind RPC/ZMQ to 0.0.0.0." "检测到 Fractald RPC/ZMQ 仅绑定本机回环。请增加 Docker bridge 的 rpcbind/rpcallowip 和 ZMQ 绑定后重启 Fractald。请绑定实际 Docker bridge 地址并仅放行已确认的容器网络 CIDR；不要将 RPC/ZMQ 绑定到 0.0.0.0。"
     fi
     error_i "Container RPC test failed. Check the RPC URL, credentials, rpcbind/rpcallowip, Docker host-gateway, and whether the node uses port 8332 or 10332." "容器内 RPC 测试失败。请检查 RPC URL、账号密码、rpcbind/rpcallowip、Docker host-gateway，以及节点实际使用 8332 还是 10332。"
     return 1

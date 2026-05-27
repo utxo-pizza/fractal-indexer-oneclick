@@ -107,6 +107,12 @@ For public tutorials, prefer the persistent wrapper.
 # Non-destructive readiness report
 bash scripts/deploy-menu.sh --doctor
 
+# Interactive Q&A diagnosis/remediation helper
+bash scripts/qa-helper.sh
+
+# Common read-only Q&A checks
+DEPLOY_LANG=en bash scripts/qa-helper.sh --check-all
+
 # Start beginner mode directly
 bash scripts/deploy-menu.sh --beginner
 
@@ -151,6 +157,8 @@ bash scripts/deploy-menu.sh --self-test
 - [中文故障排查](docs/TROUBLESHOOTING.zh-CN.md)
 - [FAQ](docs/FAQ.en.md)
 - [中文 FAQ](docs/FAQ.zh-CN.md)
+- [Operator Q&A](docs/QA.en.md)
+- [运营商 Q&A](docs/QA.zh-CN.md)
 - [Publishing checklist](docs/PUBLISHING.en.md)
 - [中文发布清单](docs/PUBLISHING.zh-CN.md)
 - [Repository setup](docs/REPOSITORY-SETUP.en.md)
@@ -163,6 +171,14 @@ bash scripts/deploy-menu.sh --self-test
 - Do not expose Fractald RPC to the public Internet.
 - Use a strong random RPC password.
 - Internal datastore host ports are bound to `127.0.0.1` by default.
+- Check exposed ports with
+  `sudo ss -lntp | grep -E ':(8332|10332|10330|10331)\b' || true`.
+- Run `DEPLOY_LANG=en bash scripts/qa-helper.sh --check rpc-exposure`; see
+  [Operator Q&A And Script Helper](docs/QA.en.md) for supported remediations.
+- Check public API/datastore exposure with
+  `DEPLOY_LANG=en bash scripts/qa-helper.sh --check api-exposure`.
+- Check accidental tracked secrets with
+  `DEPLOY_LANG=en bash scripts/qa-helper.sh --check secrets`.
 - The proof publisher is generated with `dry_run=true` and
   `disable_broadcast=true`; real broadcasting needs a separate manual review.
 - Before official third-party operator registration opens, this project only

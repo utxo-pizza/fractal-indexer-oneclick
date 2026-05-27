@@ -55,22 +55,29 @@ If Fractald only listens on `127.0.0.1`, containers usually cannot reach it.
 Bind Fractald to the Docker bridge or host private address, and protect it with
 a firewall so RPC is not exposed publicly.
 
-Example `bitcoin.conf` fragment:
+Example `bitcoin.conf` fragment. Replace the bridge address and container CIDR
+with values confirmed on your machine; do not copy a public bind address:
 
 ```ini
 server=1
 rpcuser=bitcoinrpc
 rpcpassword=REPLACE_WITH_LONG_RANDOM_PASSWORD
 rpcport=8332
-rpcbind=0.0.0.0
+rpcbind=127.0.0.1
+rpcbind=<docker-bridge-ip>
 rpcallowip=127.0.0.1
-rpcallowip=172.16.0.0/12
-zmqpubrawblock=tcp://0.0.0.0:10330
-zmqpubrawtx=tcp://0.0.0.0:10331
+rpcallowip=<confirmed-container-cidr>
+zmqpubrawblock=tcp://<docker-bridge-ip>:10330
+zmqpubrawtx=tcp://<docker-bridge-ip>:10331
 ```
 
-This example only shows container reachability. Production systems must use
-firewall rules to restrict RPC/ZMQ inbound sources.
+Use the Q&A helper or `ip -4 addr show docker0` and
+`docker network inspect bridge --format '{{(index .IPAM.Config 0).Subnet}}'`
+as starting points for discovery. Production systems must use firewall rules to
+restrict RPC/ZMQ inbound sources.
+
+For executable public exposure checks and supported remediation actions, see
+[Operator Q&A And Script Helper](QA.en.md).
 
 ## 3. What The Menu Asks For
 
@@ -168,6 +175,12 @@ exposure depends on your firewall and reverse-proxy policy.
 
 Fractald ports `8332`, `10330`, and `10331` are provided by your node, not by
 this project.
+
+Quick listener check:
+
+```bash
+DEPLOY_LANG=en bash scripts/qa-helper.sh --check rpc-exposure
+```
 
 ## 6. Values You Usually Should Not Edit
 

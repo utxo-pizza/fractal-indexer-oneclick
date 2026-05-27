@@ -50,21 +50,28 @@ ZMQ tx:    tcp://fractald:10331
 如果 Fractald 只监听 `127.0.0.1`，容器通常访问不到。需要让 Fractald 监听 Docker
 bridge 或宿主机内网地址，并用防火墙保护，避免 RPC 暴露公网。
 
-示例 `bitcoin.conf` 片段：
+示例 `bitcoin.conf` 片段。请把 bridge 地址和容器 CIDR 替换成你机器上确认过的值；
+不要复制公网监听地址：
 
 ```ini
 server=1
 rpcuser=bitcoinrpc
 rpcpassword=REPLACE_WITH_LONG_RANDOM_PASSWORD
 rpcport=8332
-rpcbind=0.0.0.0
+rpcbind=127.0.0.1
+rpcbind=<docker-bridge-ip>
 rpcallowip=127.0.0.1
-rpcallowip=172.16.0.0/12
-zmqpubrawblock=tcp://0.0.0.0:10330
-zmqpubrawtx=tcp://0.0.0.0:10331
+rpcallowip=<confirmed-container-cidr>
+zmqpubrawblock=tcp://<docker-bridge-ip>:10330
+zmqpubrawtx=tcp://<docker-bridge-ip>:10331
 ```
 
-这个示例只说明容器可访问配置。生产环境必须用防火墙限制 RPC/ZMQ 入站来源。
+可以用 Q&A 助手，或用 `ip -4 addr show docker0` 和
+`docker network inspect bridge --format '{{(index .IPAM.Config 0).Subnet}}'`
+作为发现入口。生产环境必须用防火墙限制 RPC/ZMQ 入站来源。
+
+具体可执行公网暴露检查和支持的处理动作见
+[运营商 Q&A 与脚本助手](QA.zh-CN.md)。
 
 ## 3. 菜单会让你填写什么
 
@@ -154,6 +161,12 @@ Fractald 连接：
 和反向代理策略。
 
 Fractald 的 `8332`、`10330`、`10331` 由你的节点负责，不由本项目创建。
+
+快速检查监听：
+
+```bash
+DEPLOY_LANG=zh bash scripts/qa-helper.sh --check rpc-exposure
+```
 
 ## 6. 不建议手动改的内容
 
