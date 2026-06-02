@@ -444,6 +444,12 @@ pause() {
   fi
 }
 
+git_in_repo() {
+  local path="$1"
+  shift
+  git -c "safe.directory=${path}" -C "${path}" "$@"
+}
+
 ensure_official_deploy_bundle() {
   local mode="${1:-auto}"
   local status=0
@@ -493,7 +499,7 @@ ensure_official_deploy_bundle_locked() {
       return 1
     fi
     require_official_deploy_files || return 1
-    head="$(git -C "${DEPLOY_BUNDLE_DIR}" rev-parse --short HEAD 2>/dev/null || printf "unknown")"
+    head="$(git_in_repo "${DEPLOY_BUNDLE_DIR}" rev-parse --short HEAD 2>/dev/null || printf "unknown")"
     line_i "OK   using existing official deploy bundle in read-only mode: ${DEPLOY_BUNDLE_DIR} (${head})" "OK   只读使用已有官方部署包：${DEPLOY_BUNDLE_DIR}（${head}）"
     return 0
   fi
@@ -521,53 +527,53 @@ ensure_official_deploy_bundle_locked() {
     fi
   fi
   require_official_deploy_files || return 1
-  head="$(git -C "${DEPLOY_BUNDLE_DIR}" rev-parse --short HEAD 2>/dev/null || printf "unknown")"
+  head="$(git_in_repo "${DEPLOY_BUNDLE_DIR}" rev-parse --short HEAD 2>/dev/null || printf "unknown")"
   line_i "OK   official deploy bundle ready: ${DEPLOY_BUNDLE_DIR} (${head})" "OK   官方部署包已就绪：${DEPLOY_BUNDLE_DIR}（${head}）"
 }
 
 sync_official_deploy_bundle() {
   local branch current
-  git -C "${DEPLOY_BUNDLE_DIR}" fetch --tags origin || return 1
+  git_in_repo "${DEPLOY_BUNDLE_DIR}" fetch --tags origin || return 1
   if [[ -n "${OFFICIAL_DEPLOY_REF}" ]]; then
-    git -C "${DEPLOY_BUNDLE_DIR}" checkout --detach "${OFFICIAL_DEPLOY_REF}" || return 1
+    git_in_repo "${DEPLOY_BUNDLE_DIR}" checkout --detach "${OFFICIAL_DEPLOY_REF}" || return 1
     return 0
   fi
 
   branch="$(official_deploy_default_branch)" || return 1
-  current="$(git -C "${DEPLOY_BUNDLE_DIR}" branch --show-current 2>/dev/null || true)"
+  current="$(git_in_repo "${DEPLOY_BUNDLE_DIR}" branch --show-current 2>/dev/null || true)"
   if [[ "${current}" != "${branch}" ]]; then
-    if git -C "${DEPLOY_BUNDLE_DIR}" show-ref --verify --quiet "refs/heads/${branch}"; then
-      git -C "${DEPLOY_BUNDLE_DIR}" checkout "${branch}" || return 1
+    if git_in_repo "${DEPLOY_BUNDLE_DIR}" show-ref --verify --quiet "refs/heads/${branch}"; then
+      git_in_repo "${DEPLOY_BUNDLE_DIR}" checkout "${branch}" || return 1
     else
-      git -C "${DEPLOY_BUNDLE_DIR}" checkout -b "${branch}" --track "origin/${branch}" || return 1
+      git_in_repo "${DEPLOY_BUNDLE_DIR}" checkout -b "${branch}" --track "origin/${branch}" || return 1
     fi
   fi
 
-  git -C "${DEPLOY_BUNDLE_DIR}" pull --ff-only origin "${branch}" || return 1
+  git_in_repo "${DEPLOY_BUNDLE_DIR}" pull --ff-only origin "${branch}" || return 1
 }
 
 official_deploy_default_branch() {
   local branch
-  branch="$(git -C "${DEPLOY_BUNDLE_DIR}" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+  branch="$(git_in_repo "${DEPLOY_BUNDLE_DIR}" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
   branch="${branch#origin/}"
   if [[ -n "${branch}" ]]; then
     printf "%s" "${branch}"
     return 0
   fi
 
-  git -C "${DEPLOY_BUNDLE_DIR}" remote set-head origin -a >/dev/null 2>&1 || true
-  branch="$(git -C "${DEPLOY_BUNDLE_DIR}" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+  git_in_repo "${DEPLOY_BUNDLE_DIR}" remote set-head origin -a >/dev/null 2>&1 || true
+  branch="$(git_in_repo "${DEPLOY_BUNDLE_DIR}" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
   branch="${branch#origin/}"
   if [[ -n "${branch}" ]]; then
     printf "%s" "${branch}"
     return 0
   fi
 
-  if git -C "${DEPLOY_BUNDLE_DIR}" show-ref --verify --quiet refs/remotes/origin/main; then
+  if git_in_repo "${DEPLOY_BUNDLE_DIR}" show-ref --verify --quiet refs/remotes/origin/main; then
     printf "main"
     return 0
   fi
-  if git -C "${DEPLOY_BUNDLE_DIR}" show-ref --verify --quiet refs/remotes/origin/master; then
+  if git_in_repo "${DEPLOY_BUNDLE_DIR}" show-ref --verify --quiet refs/remotes/origin/master; then
     printf "master"
     return 0
   fi
@@ -609,9 +615,9 @@ official_deploy_bundle_status() {
   if [[ "${QA_READ_ONLY:-false}" != "true" ]]; then
     install_official_deploy_excludes || return 1
   fi
-  git -C "${DEPLOY_BUNDLE_DIR}" remote -v
-  git -C "${DEPLOY_BUNDLE_DIR}" status --short --branch
-  git -C "${DEPLOY_BUNDLE_DIR}" log --oneline -3
+  git_in_repo "${DEPLOY_BUNDLE_DIR}" remote -v
+  git_in_repo "${DEPLOY_BUNDLE_DIR}" status --short --branch
+  git_in_repo "${DEPLOY_BUNDLE_DIR}" log --oneline -3
 }
 
 require_official_deploy_files() {
@@ -835,7 +841,7 @@ check_related_repo() {
   local url="$3"
   if [[ -d "${path}/.git" ]]; then
     local head
-    head="$(git -C "${path}" rev-parse --short HEAD 2>/dev/null || printf "unknown")"
+    head="$(git_in_repo "${path}" rev-parse --short HEAD 2>/dev/null || printf "unknown")"
     printf "  OK   %s: %s (%s)\n" "${name}" "${path}" "${head}"
   elif [[ -d "${path}" ]]; then
     printf "  OK   %s: %s\n" "${name}" "${path}"
@@ -1180,7 +1186,7 @@ clone_repo_if_missing() {
       return 0
     fi
     info_i "${name} already exists; pulling latest official changes." "${name} 已存在，尝试拉取官方最新代码。"
-    git -C "${path}" pull --ff-only || warn_i "Could not fast-forward ${name}; leaving it unchanged." "${name} 无法快进更新，保持现状。"
+    git_in_repo "${path}" pull --ff-only || warn_i "Could not fast-forward ${name}; leaving it unchanged." "${name} 无法快进更新，保持现状。"
     return 0
   fi
   if [[ -e "${path}" ]]; then
@@ -1195,7 +1201,7 @@ is_official_repo() {
   local path="$1"
   local expected="$2"
   local actual expected_no_git repo_name
-  actual="$(git -C "${path}" config --get remote.origin.url 2>/dev/null || true)"
+  actual="$(git_in_repo "${path}" config --get remote.origin.url 2>/dev/null || true)"
   expected_no_git="${expected%.git}"
   repo_name="${expected_no_git##*/}"
   case "${actual}" in
@@ -1391,6 +1397,7 @@ self_test() {
   self_test_assert_success "operator registration command safely refuses before official launch" grep -Fq 'operator registration is not enabled yet' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "official bundle validation CLI is documented" grep -Fq -- '--validate-official' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "official deploy bundle lock is cleaned on process exit" grep -Fq 'trap release_official_deploy_lock EXIT' "${BASH_SOURCE[0]}" || failed=1
+  self_test_assert_success "official git operations tolerate different directory owners" grep -Fq 'safe.directory=${path}' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "Q&A delegated checks support read-only official bundle mode" grep -Fq 'QA_READ_ONLY:-false' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "Q&A helper exposure checks pass" bash "${ROOT_DIR}/scripts/qa-helper.sh" --self-test || failed=1
   self_test_assert_success "beginner mode CLI command is documented" grep -Fq -- '--beginner' "${BASH_SOURCE[0]}" || failed=1
