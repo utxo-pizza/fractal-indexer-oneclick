@@ -146,6 +146,10 @@ main() {
       validate_official_bundle
       return 0
       ;;
+    --upgrade-existing-stake)
+      upgrade_existing_stake_indexer "${2:-}"
+      return 0
+      ;;
     --validate-proof)
       validate_proof_publisher_config_file
       return 0
@@ -243,6 +247,7 @@ Fractal Indexer 交互式部署菜单
   bash scripts/deploy-menu.sh --sync-official
   bash scripts/deploy-menu.sh --official-status
   bash scripts/deploy-menu.sh --validate-official
+  bash scripts/deploy-menu.sh --upgrade-existing-stake /path/to/fractal-indexer-deploy
   bash scripts/deploy-menu.sh --health
   bash scripts/deploy-menu.sh --validate-proof
   bash scripts/deploy-menu.sh --proof-registration-checklist
@@ -276,6 +281,7 @@ Fractal Indexer 交互式部署菜单
   - 恢复官方 fractal-indexer 快照
   - 初始化并启动 fractal-indexer
   - 初始化并启动 stake-indexer
+  - 将已有非 Git 官方部署目录里的 stake-indexer 升级到当前官方版本，保留数据和 chain.yaml
   - 一键配置/校验 proof-publisher dry-run
   - 提供未来运营商注册 checklist，不自动真实广播
   - 预留一键注册运营商入口；官方开放前安全拒绝执行
@@ -297,6 +303,7 @@ Usage:
   bash scripts/deploy-menu.sh --sync-official
   bash scripts/deploy-menu.sh --official-status
   bash scripts/deploy-menu.sh --validate-official
+  bash scripts/deploy-menu.sh --upgrade-existing-stake /path/to/fractal-indexer-deploy
   bash scripts/deploy-menu.sh --health
   bash scripts/deploy-menu.sh --validate-proof
   bash scripts/deploy-menu.sh --proof-registration-checklist
@@ -330,6 +337,7 @@ The interactive menu can:
   - restore the official fractal-indexer snapshot
   - initialize and start fractal-indexer
   - initialize and start stake-indexer
+  - upgrade stake-indexer inside an existing non-git official deploy directory while preserving data and chain.yaml
   - configure and validate proof-publisher dry-run in one pass
   - show the future operator registration checklist without real broadcasting
   - reserve one-click operator registration; safely refuse before official launch
@@ -448,6 +456,17 @@ git_in_repo() {
   local path="$1"
   shift
   git -c "safe.directory=${path}" -C "${path}" "$@"
+}
+
+set_deploy_bundle_dir() {
+  DEPLOY_BUNDLE_DIR="$1"
+  FRACTAL_INDEXER_DIR="${DEPLOY_BUNDLE_DIR}/fractal-indexer"
+  STAKE_INDEXER_DIR="${DEPLOY_BUNDLE_DIR}/stake-indexer"
+  STAKE_CONFIG_FILE="${STAKE_INDEXER_DIR}/conf/indexer/config.yaml"
+  PROOF_PUBLISHER_DIR="${DEPLOY_BUNDLE_DIR}/proof-publisher"
+  PROOF_CONFIG_EXAMPLE="${PROOF_PUBLISHER_DIR}/config.example.json"
+  FRACTAL_MENU_COMPOSE="${FRACTAL_INDEXER_DIR}/docker-compose.menu.yaml"
+  STAKE_MENU_COMPOSE="${STAKE_INDEXER_DIR}/docker-compose.menu.yaml"
 }
 
 ensure_official_deploy_bundle() {
@@ -1398,6 +1417,9 @@ self_test() {
   self_test_assert_success "official bundle validation CLI is documented" grep -Fq -- '--validate-official' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "official deploy bundle lock is cleaned on process exit" grep -Fq 'trap release_official_deploy_lock EXIT' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "official git operations tolerate different directory owners" grep -Fq 'safe.directory=${path}' "${BASH_SOURCE[0]}" || failed=1
+  self_test_assert_success "existing stake upgrade CLI is documented" grep -Fq -- '--upgrade-existing-stake' "${BASH_SOURCE[0]}" || failed=1
+  self_test_assert_success "existing stake upgrade preserves chain config" grep -Fq 'stake-indexer/conf/indexer/chain.yaml is missing' "${BASH_SOURCE[0]}" || failed=1
+  self_test_assert_success "existing stake upgrade requires existing data" grep -Fq 'stake-indexer/data is missing' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "Q&A delegated checks support read-only official bundle mode" grep -Fq 'QA_READ_ONLY:-false' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "Q&A helper exposure checks pass" bash "${ROOT_DIR}/scripts/qa-helper.sh" --self-test || failed=1
   self_test_assert_success "beginner mode CLI command is documented" grep -Fq -- '--beginner' "${BASH_SOURCE[0]}" || failed=1
@@ -3322,6 +3344,74 @@ run_init_script() {
   (cd "${dir}" && bash "${tmp}" "$@") || status=$?
   rm -f "${tmp}"
   return "${status}"
+}
+
+upgrade_existing_stake_indexer() {
+  local target="${1:-}"
+  local official_dir target_abs timestamp backup_dir rel
+  if [[ -z "${target}" ]]; then
+    error_i "Usage: bash scripts/deploy-menu.sh --upgrade-existing-stake /path/to/fractal-indexer-deploy" "用法：bash scripts/deploy-menu.sh --upgrade-existing-stake /path/to/fractal-indexer-deploy"
+    return 1
+  fi
+  if [[ ! -d "${target}" ]]; then
+    error_i "Existing deploy directory was not found: ${target}" "未找到已有部署目录：${target}"
+    return 1
+  fi
+  target_abs="$(cd "${target}" && pwd)" || return 1
+  if [[ ! -d "${target_abs}/stake-indexer/data" ]]; then
+    error_i "Refusing to upgrade because stake-indexer/data is missing in ${target_abs}." "拒绝升级：${target_abs} 中缺少 stake-indexer/data。"
+    return 1
+  fi
+  if [[ ! -f "${target_abs}/stake-indexer/conf/indexer/chain.yaml" ]]; then
+    error_i "Refusing to upgrade because stake-indexer/conf/indexer/chain.yaml is missing in ${target_abs}." "拒绝升级：${target_abs} 中缺少 stake-indexer/conf/indexer/chain.yaml。"
+    return 1
+  fi
+
+  official_dir="${DEPLOY_BUNDLE_DIR}"
+  validate_official_bundle || return 1
+  timestamp="$(date +%Y%m%dT%H%M%S)"
+  backup_dir="${target_abs}/.oneclick-backup-${timestamp}/stake-indexer"
+  mkdir -p "${backup_dir}" || return 1
+
+  for rel in \
+    "README.md" \
+    "docker-compose.yaml" \
+    "docker-compose.menu.yaml" \
+    "docker-compose.override.yaml" \
+    "scripts/init.sh" \
+    "conf/redis/redis.conf" \
+    "conf/indexer/chain.yaml.example" \
+    "conf/indexer/config.yaml" \
+    "conf/indexer/pg.yaml" \
+    "conf/indexer/rdb_balance.yaml" \
+    "conf/indexer/rdb_utxo.yaml"; do
+    if [[ -e "${target_abs}/stake-indexer/${rel}" ]]; then
+      mkdir -p "$(dirname "${backup_dir}/${rel}")" || return 1
+      cp -a "${target_abs}/stake-indexer/${rel}" "${backup_dir}/${rel}" || return 1
+    fi
+  done
+
+  info_i "Syncing official stake-indexer files into the existing deploy directory" "同步官方 stake-indexer 文件到已有部署目录"
+  mkdir -p \
+    "${target_abs}/stake-indexer/scripts" \
+    "${target_abs}/stake-indexer/conf/redis" \
+    "${target_abs}/stake-indexer/conf/indexer" || return 1
+
+  for rel in "README.md" "docker-compose.yaml" "scripts/init.sh" "conf/redis/redis.conf" \
+    "conf/indexer/chain.yaml.example" "conf/indexer/config.yaml" "conf/indexer/pg.yaml" \
+    "conf/indexer/rdb_balance.yaml" "conf/indexer/rdb_utxo.yaml"; do
+    if [[ ! -e "${official_dir}/stake-indexer/${rel}" ]]; then
+      error_i "Official deploy bundle is missing stake-indexer/${rel}." "官方部署包缺少 stake-indexer/${rel}。"
+      return 1
+    fi
+    cp -a "${official_dir}/stake-indexer/${rel}" "${target_abs}/stake-indexer/${rel}" || return 1
+  done
+
+  line_i "OK   preserved existing stake-indexer data and chain.yaml" "OK   已保留已有 stake-indexer 数据和 chain.yaml"
+  line_i "OK   backup saved under ${backup_dir}" "OK   备份已保存到 ${backup_dir}"
+
+  set_deploy_bundle_dir "${target_abs}"
+  start_stake_indexer
 }
 
 start_fractal_indexer() {
