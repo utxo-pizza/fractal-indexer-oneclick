@@ -1420,6 +1420,7 @@ self_test() {
   self_test_assert_success "existing stake upgrade CLI is documented" grep -Fq -- '--upgrade-existing-stake' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "existing stake upgrade preserves chain config" grep -Fq 'stake-indexer/conf/indexer/chain.yaml is missing' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "existing stake upgrade requires existing data" grep -Fq 'stake-indexer/data is missing' "${BASH_SOURCE[0]}" || failed=1
+  self_test_assert_success "existing stake upgrade regenerates stale runtime compose" grep -Fq 'stale stake-indexer runtime Compose file will be regenerated' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "Q&A delegated checks support read-only official bundle mode" grep -Fq 'QA_READ_ONLY:-false' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "Q&A helper exposure checks pass" bash "${ROOT_DIR}/scripts/qa-helper.sh" --self-test || failed=1
   self_test_assert_success "beginner mode CLI command is documented" grep -Fq -- '--beginner' "${BASH_SOURCE[0]}" || failed=1
@@ -3406,8 +3407,10 @@ upgrade_existing_stake_indexer() {
     fi
     cp -a "${official_dir}/stake-indexer/${rel}" "${target_abs}/stake-indexer/${rel}" || return 1
   done
+  rm -f "${target_abs}/stake-indexer/docker-compose.menu.yaml" || return 1
 
   line_i "OK   preserved existing stake-indexer data and chain.yaml" "OK   已保留已有 stake-indexer 数据和 chain.yaml"
+  line_i "OK   stale stake-indexer runtime Compose file will be regenerated" "OK   旧 stake-indexer 运行时 Compose 文件将重新生成"
   line_i "OK   backup saved under ${backup_dir}" "OK   备份已保存到 ${backup_dir}"
 
   set_deploy_bundle_dir "${target_abs}"
