@@ -129,7 +129,7 @@ list_topics() {
     cat <<'EOF'
 Topics:
   prerequisites   运行依赖和部署前置条件
-  official        官方部署包版本与更新
+  official        官方部署包版本、v0.2.0 镜像与配置校验
   fractald        是否存在可用 Fractald 节点
   rpc             RPC 端口、容器连通和剪枝兼容
   rpc-exposure    Fractald RPC/ZMQ 公网暴露风险
@@ -149,7 +149,7 @@ EOF
     cat <<'EOF'
 Topics:
   prerequisites   Runtime dependencies and deployment prerequisites
-  official        Official deploy bundle version and updates
+  official        Official deploy bundle version, v0.2.0 image, and config checks
   fractald        Presence of a usable Fractald node
   rpc             RPC port, container connectivity, pruning compatibility
   rpc-exposure    Fractald RPC/ZMQ public exposure risk
@@ -351,6 +351,7 @@ check_official() {
     return 0
   fi
   run_deploy_menu_readonly --official-status
+  run_deploy_menu_readonly --validate-official
 }
 
 fix_official() {

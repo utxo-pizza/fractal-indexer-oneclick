@@ -33,6 +33,7 @@ bash scripts/deploy-menu.sh --doctor
 bash scripts/deploy-menu.sh --beginner
 bash scripts/deploy-menu.sh --install-deps
 bash scripts/deploy-menu.sh --self-test
+bash scripts/deploy-menu.sh --validate-official
 bash scripts/deploy-menu.sh --health
 bash scripts/qa-helper.sh
 bash scripts/qa-helper.sh --check-all
@@ -50,8 +51,8 @@ bash scripts/qa-helper.sh --check-all
 - validates Fractald RPC from inside a Docker container before the automatic
   flow restores the snapshot or starts services
 - verifies standard Fractald `getblockhash`/`getblock` access at the snapshot
-  and reward-start heights, so official `stake-indexer` v0.1.1 RPC
-  compatibility and pruned-node block availability are checked before startup
+  and reward-start heights, so official `stake-indexer` RPC compatibility and
+  pruned-node block availability are checked before startup
 - exposes the same RPC and snapshot compatibility test as
   `bash scripts/deploy-menu.sh --validate-rpc`
 - exposes a read-only stake readiness check as
@@ -246,9 +247,13 @@ Known startup checks:
 - When proof-publisher dry-run startup is selected, the official image must be
   reachable in the registry or already cached locally with an official registry
   digest. This check runs before long-running deployment work.
-- `fractalbitcoin/stake-indexer` must use an official pinned tag at `v0.1.1`
+- `fractalbitcoin/stake-indexer` must use an official pinned tag at `v0.2.0`
   or newer. `latest` is rejected because it makes reproducing protocol behavior
   harder for operators.
+- The official stake config must include the v0.2.0 Stage 2 fields:
+  `pending_reward_lag_blocks`, `delay_submit_stage2_step_blocks`,
+  `delay_submit_stage2_step_percent`, `commission_activation_blocks`,
+  `stage2_start_height`, and `enable_mempool_indexing`.
 - The pinned official image must accept the checked-in
   `stake-indexer/conf/indexer/config.yaml`. If the image still behaves like an
   older release, the menu reports the upstream image/config mismatch and stops.
@@ -258,6 +263,9 @@ Known startup checks:
 - If a stale stake-indexer container is still calling `getblockindexrange`, the
   menu reports that the running service is older than the current official
   release and stops rather than applying local RPC fallback patches.
+- Current official v0.2.0 deployment sets `commission_activation_blocks: 20160`.
+  Commission changes are indexed immediately as events, but the reward logic
+  applies the delayed commission rule according to the official config.
 - The health check inspects recent stake-indexer logs as well as HTTP ports, so
   an API process that is up but repeatedly failing block sync is reported as a
   deployment problem.

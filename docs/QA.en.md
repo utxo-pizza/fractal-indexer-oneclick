@@ -37,6 +37,7 @@ Rules:
 | SSH disconnect or interrupted flow | `interrupted` | Gives recovery path; can reopen the menu |
 | Why stake did not start | `statehash` | Checks the statehash startup gate |
 | Are deployed services healthy | `health` | Runs the complete health check |
+| What changed in stake-indexer v0.2.0 | `official` / `health` | Checks official bundle/image/config alignment |
 | Can proof-publisher broadcast | `proof` | Checks; can restore dry-run safeguards |
 | Can operator registration run now | `registration` | Shows the pre-launch boundary |
 | Did secrets enter git | `secrets` | Checks tracked high-risk runtime paths |
@@ -74,6 +75,9 @@ The project does not vendor official service directories. At runtime it uses
 the official `fractal-bitcoin/fractal-indexer-deploy` checkout and validates
 official image sources.
 
+As of the official deploy commit `fbc1466`, the current pinned stake image is
+`fractalbitcoin/stake-indexer:v0.2.0`.
+
 ```bash
 DEPLOY_LANG=en bash scripts/qa-helper.sh --check scope
 DEPLOY_LANG=en bash scripts/qa-helper.sh --check official
@@ -82,6 +86,45 @@ DEPLOY_LANG=en bash scripts/qa-helper.sh --fix official --apply
 
 The last command explicitly updates the official deployment bundle. It does not
 introduce dynamic commission or local staking modifications.
+
+## Q: What changed in the official `stake-indexer` v0.2.0 update?
+
+The deploy bundle now pins `fractalbitcoin/stake-indexer:v0.2.0` and adds the
+official Stage 2 config fields:
+
+```yaml
+pending_reward_lag_blocks: 1000
+delay_submit_stage2_step_blocks: 100
+delay_submit_stage2_step_percent: 10
+commission_activation_blocks: 20160
+stage2_start_height: 1824480
+enable_mempool_indexing: false
+start_reward_height: 1764000
+```
+
+The helper validates that these fields exist before startup:
+
+```bash
+DEPLOY_LANG=en bash scripts/qa-helper.sh --check official
+DEPLOY_LANG=en bash scripts/deploy-menu.sh --validate-official
+DEPLOY_LANG=en bash scripts/deploy-menu.sh --official-status
+```
+
+Do not edit reward phase, pending reward, or commission activation settings in
+this one-click package. They are official protocol behavior.
+
+## Q: How long does a commission change take to affect rewards now?
+
+The v0.2.0 config includes:
+
+```yaml
+commission_activation_blocks: 20160
+```
+
+A valid `commission_rate` event is indexed, but the new ratio is delayed by the
+official activation window before reward allocation uses it. Registration-time
+commission ratios above the current official limit are rejected by
+`stake-indexer`; do not patch this deployment package to bypass those rules.
 
 ## Q: Should RPC use `8332` or `10332`?
 
@@ -113,9 +156,9 @@ DEPLOY_LANG=en bash scripts/qa-helper.sh --fix official --apply
 ```
 
 If the health check reports an old `stake-indexer` calling `getblockindexrange`,
-update the official deployment bundle/image and recreate the official service
-from the menu. This repository must not patch Fractald or run a local modified
-stake image to hide that mismatch.
+update the official deployment bundle/image and recreate the official v0.2.0
+service from the menu. This repository must not patch Fractald or run a local
+modified stake image to hide that mismatch.
 
 ## Q: Risk - is Fractald RPC/ZMQ exposed publicly?
 

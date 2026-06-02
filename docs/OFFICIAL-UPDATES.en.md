@@ -46,6 +46,12 @@ Show the current official deployment checkout:
 bash scripts/deploy-menu.sh --official-status
 ```
 
+Validate current official image and config alignment:
+
+```bash
+bash scripts/deploy-menu.sh --validate-official
+```
+
 Manually sync the official deployment bundle:
 
 ```bash

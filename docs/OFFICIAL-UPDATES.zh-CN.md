@@ -41,6 +41,12 @@ DEPLOY_BUNDLE_DIR=.official/fractal-indexer-deploy
 bash scripts/deploy-menu.sh --official-status
 ```
 
+校验当前官方镜像和配置是否一致：
+
+```bash
+bash scripts/deploy-menu.sh --validate-official
+```
+
 手动同步官方部署包：
 
 ```bash

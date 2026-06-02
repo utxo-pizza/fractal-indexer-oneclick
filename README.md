@@ -15,7 +15,8 @@ one-click scripts and documentation.
 ## What It Deploys
 
 - Official `fractalbitcoin/fractal-indexer` Docker image and data services.
-- Official `fractalbitcoin/stake-indexer:v0.1.1` Docker image.
+- Official pinned `fractalbitcoin/stake-indexer:v0.2.0` Docker image from the
+  current deployment bundle.
 - Optional official `fractalbitcoin/fractal-proof-publisher` dry-run config.
 - Runtime fetch/update of the official `fractal-bitcoin/fractal-indexer-deploy`
   repository.
@@ -127,6 +128,9 @@ bash scripts/deploy-menu.sh --sync-official
 
 # Show current official deployment bundle version
 bash scripts/deploy-menu.sh --official-status
+
+# Validate official image/config alignment
+bash scripts/deploy-menu.sh --validate-official
 
 # Full service health check
 bash scripts/deploy-menu.sh --health

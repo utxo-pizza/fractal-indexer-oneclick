@@ -37,6 +37,7 @@ DEPLOY_LANG=zh bash scripts/qa-helper.sh --list
 | SSH 中断后怎么恢复 | `interrupted` | 给恢复路径；可重新打开菜单 |
 | 为什么 stake 没启动 | `statehash` | 校验 statehash 门槛 |
 | 服务现在正常吗 | `health` | 调用完整健康检查 |
+| stake-indexer v0.2.0 改了什么 | `official` / `health` | 检查官方包/镜像/配置是否一致 |
 | proof 是否可能广播 | `proof` | 检查；可强制恢复 dry-run |
 | 能不能一键注册运营商 | `registration` | 显示官方开放前的边界 |
 | 有没有敏感文件误提交 | `secrets` | 检查被 Git 跟踪的高风险文件 |
@@ -73,6 +74,9 @@ DEPLOY_LANG=zh bash scripts/qa-helper.sh --fix prerequisites --apply
 本项目不 vendoring 官方服务目录；运行时使用官方
 `fractal-bitcoin/fractal-indexer-deploy` checkout，并校验官方镜像来源。
 
+截至官方部署提交 `fbc1466`，当前固定的 stake 镜像是
+`fractalbitcoin/stake-indexer:v0.2.0`。
+
 ```bash
 DEPLOY_LANG=zh bash scripts/qa-helper.sh --check scope
 DEPLOY_LANG=zh bash scripts/qa-helper.sh --check official
@@ -80,6 +84,42 @@ DEPLOY_LANG=zh bash scripts/qa-helper.sh --fix official --apply
 ```
 
 最后一条会显式更新官方部署包，不会加入动态佣金或本地质押魔改。
+
+## Q：官方 `stake-indexer` v0.2.0 改了什么？
+
+部署包现在固定 `fractalbitcoin/stake-indexer:v0.2.0`，并增加官方 Stage 2 配置项：
+
+```yaml
+pending_reward_lag_blocks: 1000
+delay_submit_stage2_step_blocks: 100
+delay_submit_stage2_step_percent: 10
+commission_activation_blocks: 20160
+stage2_start_height: 1824480
+enable_mempool_indexing: false
+start_reward_height: 1764000
+```
+
+助手会在启动前检查这些字段是否存在：
+
+```bash
+DEPLOY_LANG=zh bash scripts/qa-helper.sh --check official
+DEPLOY_LANG=zh bash scripts/deploy-menu.sh --validate-official
+DEPLOY_LANG=zh bash scripts/deploy-menu.sh --official-status
+```
+
+不要在这个一键包里改奖励阶段、pending reward 或佣金激活配置；这些属于官方协议行为。
+
+## Q：现在改佣金多久影响奖励？
+
+v0.2.0 配置里包含：
+
+```yaml
+commission_activation_blocks: 20160
+```
+
+有效的 `commission_rate` 事件会被索引，但奖励分配使用新比例前要经过官方激活窗口。
+注册时佣金比例超过当前官方上限会被 `stake-indexer` 判为无效；不要在这个部署包里
+魔改绕过这些规则。
 
 ## Q：RPC 端口到底是 `8332` 还是 `10332`？
 
@@ -109,8 +149,8 @@ DEPLOY_LANG=zh bash scripts/qa-helper.sh --fix official --apply
 ```
 
 如果健康检查提示旧 `stake-indexer` 仍在调用 `getblockindexrange`，应更新官方部署包/
-镜像，并通过菜单重建官方服务。这个仓库不能为了绕过该问题去补丁 Fractald 或运行本地
-魔改 stake 镜像。
+镜像，并通过菜单重建官方 v0.2.0 服务。这个仓库不能为了绕过该问题去补丁 Fractald
+或运行本地魔改 stake 镜像。
 
 ## Q：风险 - Fractald RPC/ZMQ 有没有暴露到公网？
 

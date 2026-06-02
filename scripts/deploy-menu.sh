@@ -142,6 +142,10 @@ main() {
       health_check
       return 0
       ;;
+    --validate-official)
+      validate_official_bundle
+      return 0
+      ;;
     --validate-proof)
       validate_proof_publisher_config_file
       return 0
@@ -238,6 +242,7 @@ Fractal Indexer 交互式部署菜单
   bash scripts/deploy-menu.sh --self-test
   bash scripts/deploy-menu.sh --sync-official
   bash scripts/deploy-menu.sh --official-status
+  bash scripts/deploy-menu.sh --validate-official
   bash scripts/deploy-menu.sh --health
   bash scripts/deploy-menu.sh --validate-proof
   bash scripts/deploy-menu.sh --proof-registration-checklist
@@ -291,6 +296,7 @@ Usage:
   bash scripts/deploy-menu.sh --self-test
   bash scripts/deploy-menu.sh --sync-official
   bash scripts/deploy-menu.sh --official-status
+  bash scripts/deploy-menu.sh --validate-official
   bash scripts/deploy-menu.sh --health
   bash scripts/deploy-menu.sh --validate-proof
   bash scripts/deploy-menu.sh --proof-registration-checklist
@@ -1362,10 +1368,10 @@ self_test() {
   info_i "Running internal script self-tests" "运行脚本内部自测"
   line_i "This check is non-destructive. It does not use Docker, write configs, or contact Fractald." "这个检查不会改动部署状态，不使用 Docker、不写配置、不连接 Fractald。"
 
-  self_test_assert_success "version 0.1.1 >= 0.1.1" version_at_least "0.1.1" "0.1.1" || failed=1
-  self_test_assert_success "version 0.1.2 >= 0.1.1" version_at_least "0.1.2" "0.1.1" || failed=1
-  self_test_assert_failure "version 0.1.0 < 0.1.1" version_at_least "0.1.0" "0.1.1" || failed=1
-  self_test_assert_failure "non-numeric version is rejected" version_at_least "latest" "0.1.1" || failed=1
+  self_test_assert_success "version 0.2.0 >= 0.2.0" version_at_least "0.2.0" "0.2.0" || failed=1
+  self_test_assert_success "version 0.2.1 >= 0.2.0" version_at_least "0.2.1" "0.2.0" || failed=1
+  self_test_assert_failure "version 0.1.1 < 0.2.0" version_at_least "0.1.1" "0.2.0" || failed=1
+  self_test_assert_failure "non-numeric version is rejected" version_at_least "latest" "0.2.0" || failed=1
 
   self_test_assert_equal "clamp invalid percent" "30" "$(clamp_int "abc" 30 90)" || failed=1
   self_test_assert_equal "clamp high percent" "90" "$(clamp_int "100" 30 90)" || failed=1
@@ -1383,6 +1389,7 @@ self_test() {
   self_test_assert_success "proof-publisher start waits for health" grep -Fq 'wait_for_url "http://127.0.0.1:8080/healthz" "${CFG_WAIT_TIMEOUT}" || return 1' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "proof-publisher health is conditional" grep -Fq 'if [[ "${proof_required}" == "true" ]]; then' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "operator registration command safely refuses before official launch" grep -Fq 'operator registration is not enabled yet' "${BASH_SOURCE[0]}" || failed=1
+  self_test_assert_success "official bundle validation CLI is documented" grep -Fq -- '--validate-official' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "official deploy bundle lock is cleaned on process exit" grep -Fq 'trap release_official_deploy_lock EXIT' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "Q&A delegated checks support read-only official bundle mode" grep -Fq 'QA_READ_ONLY:-false' "${BASH_SOURCE[0]}" || failed=1
   self_test_assert_success "Q&A helper exposure checks pass" bash "${ROOT_DIR}/scripts/qa-helper.sh" --self-test || failed=1
@@ -1470,7 +1477,16 @@ self_test() {
     rm -rf "${fixture_dir}"
     return 1
   }
-  printf 'start_reward_height: 1760000\n' >"${fixture_dir}/stake-indexer/conf/indexer/config.yaml" || {
+  cat >"${fixture_dir}/stake-indexer/conf/indexer/config.yaml" <<'EOF' || {
+pending_reward_lag_blocks: 1000
+delay_submit_stage2_step_blocks: 100
+delay_submit_stage2_step_percent: 10
+commission_activation_blocks: 20160
+stage2_start_height: 1824480
+enable_mempool_indexing: false
+start_reward_height: 1764000
+state_api_base_url: "http://fractal-indexer:8000"
+EOF
     rm -rf "${fixture_dir}"
     return 1
   }
@@ -1490,6 +1506,11 @@ self_test() {
     error_i "stake start_reward_height is not numeric: ${actual:-missing}" "stake start_reward_height 不是数字：${actual:-缺失}"
     failed=1
   fi
+  self_test_assert_success "stake v0.2 config validator accepts official fields" validate_stake_v020_config_file || failed=1
+  cp "${STAKE_CONFIG_FILE}" "${STAKE_CONFIG_FILE}.ok" || failed=1
+  grep -v '^stage2_start_height:' "${STAKE_CONFIG_FILE}.ok" >"${STAKE_CONFIG_FILE}" || failed=1
+  self_test_assert_failure "stake v0.2 config validator rejects missing stage2 field" validate_stake_v020_config_file || failed=1
+  mv "${STAKE_CONFIG_FILE}.ok" "${STAKE_CONFIG_FILE}" || failed=1
   actual="$(proof_config_number "start_height" "0")"
   if [[ "${actual:-}" =~ ^[0-9]+$ && "${actual}" -gt 0 ]]; then
     printf "OK   proof-publisher scan start_height is numeric: %s\n" "${actual}"
@@ -1747,6 +1768,71 @@ stake_config_scalar() {
   ' "${STAKE_CONFIG_FILE}"
 }
 
+stake_config_required_scalar() {
+  local key="$1"
+  local value
+  value="$(stake_config_scalar "${key}")" || return 1
+  if [[ -z "${value}" ]]; then
+    error_i "Missing required stake-indexer v0.2.0 config key: ${key}" "缺少 stake-indexer v0.2.0 必需配置项：${key}"
+    return 1
+  fi
+  printf "%s" "${value}"
+}
+
+stake_config_required_uint() {
+  local key="$1"
+  local value
+  value="$(stake_config_required_scalar "${key}")" || return 1
+  if [[ ! "${value}" =~ ^[0-9]+$ ]]; then
+    error_i "stake-indexer config key ${key} must be a non-negative integer, got ${value}." "stake-indexer 配置项 ${key} 必须是非负整数，当前为 ${value}。"
+    return 1
+  fi
+  printf "%s" "${value}"
+}
+
+validate_stake_v020_config_file() {
+  local failed=0 start_height stage2_height key value bool_value
+  for key in \
+    pending_reward_lag_blocks \
+    delay_submit_stage2_step_blocks \
+    delay_submit_stage2_step_percent \
+    commission_activation_blocks; do
+    value="$(stake_config_required_uint "${key}")" || {
+      failed=1
+      continue
+    }
+    if (( value == 0 )); then
+      error_i "stake-indexer config key ${key} must be greater than 0 for the current official v0.2.0 deployment config." "当前官方 v0.2.0 部署配置要求 stake-indexer 配置项 ${key} 大于 0。"
+      failed=1
+    fi
+  done
+  start_height="$(stake_config_required_uint "start_reward_height")" || failed=1
+  stage2_height="$(stake_config_required_uint "stage2_start_height")" || failed=1
+  bool_value="$(stake_config_required_scalar "enable_mempool_indexing")" || failed=1
+  case "${bool_value}" in
+    true|false) ;;
+    *)
+      error_i "stake-indexer config key enable_mempool_indexing must be true or false, got ${bool_value}." "stake-indexer 配置项 enable_mempool_indexing 必须是 true 或 false，当前为 ${bool_value}。"
+      failed=1
+      ;;
+  esac
+  value="$(stake_config_required_scalar "state_api_base_url")" || failed=1
+  value="${value%\"}"
+  value="${value#\"}"
+  if [[ -z "${value}" ]]; then
+    error_i "stake-indexer config key state_api_base_url must be set for the official deployment bundle." "官方部署包必须设置 stake-indexer 配置项 state_api_base_url。"
+    failed=1
+  fi
+  if [[ "${start_height:-}" =~ ^[0-9]+$ && "${stage2_height:-}" =~ ^[0-9]+$ ]] && (( stage2_height < start_height )); then
+    error_i "stage2_start_height ${stage2_height} is below start_reward_height ${start_height}." "stage2_start_height ${stage2_height} 低于 start_reward_height ${start_height}。"
+    failed=1
+  fi
+  if [[ "${failed}" -eq 0 ]]; then
+    line_i "OK   stake-indexer v0.2.0 config fields are present" "OK   stake-indexer v0.2.0 配置项齐全"
+  fi
+  return "${failed}"
+}
+
 stake_statehash_height() {
   local height
   height="$(stake_config_scalar "start_reward_height")" || return 1
@@ -1827,20 +1913,20 @@ validate_official_bundle() {
       failed=1
       ;;
     fractalbitcoin/stake-indexer:latest)
-      error_i "This deploy bundle still selects stake-indexer:latest. Update to an official deployment release that pins stake-indexer v0.1.1 or newer before continuing." "当前部署包仍选择 stake-indexer:latest。继续前请更新到固定使用 stake-indexer v0.1.1 或更高版本的官方部署版本。"
+      error_i "This deploy bundle still selects stake-indexer:latest. Update to the official deployment release that pins stake-indexer v0.2.0 or newer before continuing." "当前部署包仍选择 stake-indexer:latest。继续前请更新到固定使用 stake-indexer v0.2.0 或更高版本的官方部署版本。"
       failed=1
       ;;
     fractalbitcoin/stake-indexer:v*)
       stake_version="${stake_image#fractalbitcoin/stake-indexer:v}"
-      if version_at_least "${stake_version}" "0.1.1"; then
+      if version_at_least "${stake_version}" "0.2.0"; then
         printf "OK   official pinned stake-indexer image: %s\n" "${stake_image}"
       else
-        error_i "stake-indexer image ${stake_image} is older than official v0.1.1, which is required for the current deployment config." "stake-indexer 镜像 ${stake_image} 低于当前部署配置要求的官方 v0.1.1。"
+        error_i "stake-indexer image ${stake_image} is older than official v0.2.0, which is required for the current deployment config." "stake-indexer 镜像 ${stake_image} 低于当前部署配置要求的官方 v0.2.0。"
         failed=1
       fi
       ;;
     fractalbitcoin/stake-indexer:*)
-      error_i "stake-indexer image must use an official pinned v0.1.1-or-newer tag, not ${stake_image}." "stake-indexer 镜像必须使用官方固定的 v0.1.1 或更高版本标签，不能使用 ${stake_image}。"
+      error_i "stake-indexer image must use an official pinned v0.2.0-or-newer tag, not ${stake_image}." "stake-indexer 镜像必须使用官方固定的 v0.2.0 或更高版本标签，不能使用 ${stake_image}。"
       failed=1
       ;;
     *)
@@ -1848,6 +1934,7 @@ validate_official_bundle() {
       failed=1
       ;;
   esac
+  validate_stake_v020_config_file || failed=1
 
   if statehash_height="$(stake_statehash_height)"; then
     printf "OK   statehash readiness height from official stake config: %s\n" "${statehash_height}"
@@ -3322,15 +3409,15 @@ diagnose_stake_indexer_logs() {
   local logs="$1"
   local failed=0
   if grep -q "threshold_fb invalid" <<<"${logs}"; then
-    error_i "The running stake-indexer image predates the current official v0.1.1 deployment config. Pull the pinned official image and recreate this service; the menu will not alter reward rules." "正在运行的 stake-indexer 镜像早于当前官方 v0.1.1 部署配置。请拉取固定的官方镜像并重建该服务；菜单不会改动奖励规则。"
+    error_i "The running stake-indexer image predates the current official v0.2.0 deployment config. Pull the pinned official image and recreate this service; the menu will not alter reward rules." "正在运行的 stake-indexer 镜像早于当前官方 v0.2.0 部署配置。请拉取固定的官方镜像并重建该服务；菜单不会改动奖励规则。"
     failed=1
   fi
   if grep -q "release_percent invalid" <<<"${logs}" && grep -q "strconv.ParseUint" <<<"${logs}"; then
-    error_i "The running stake-indexer image predates official support for fractional reward release tiers. Pull the pinned official v0.1.1 image and recreate this service." "正在运行的 stake-indexer 镜像早于官方对小数奖励释放比例的支持。请拉取固定的官方 v0.1.1 镜像并重建该服务。"
+    error_i "The running stake-indexer image predates official support for fractional reward release tiers. Pull the pinned official v0.2.0 image and recreate this service." "正在运行的 stake-indexer 镜像早于官方对小数奖励释放比例的支持。请拉取固定的官方 v0.2.0 镜像并重建该服务。"
     failed=1
   fi
   if grep -q "Method not found" <<<"${logs}" && grep -q "syncBlockIndexer init latest block from rpc failed" <<<"${logs}"; then
-    error_i "A stale stake-indexer process is still calling getblockindexrange. Official stake-indexer v0.1.1 uses standard getblockhash RPC; pull the pinned official image and recreate this service." "仍有旧版 stake-indexer 进程在调用 getblockindexrange。官方 stake-indexer v0.1.1 已改用标准 getblockhash RPC；请拉取固定的官方镜像并重建该服务。"
+    error_i "A stale stake-indexer process is still calling getblockindexrange. Official stake-indexer v0.2.0 uses standard getblockhash RPC; pull the pinned official image and recreate this service." "仍有旧版 stake-indexer 进程在调用 getblockindexrange。官方 stake-indexer v0.2.0 已使用标准 getblockhash RPC；请拉取固定的官方镜像并重建该服务。"
     failed=1
   fi
   if grep -q "read chain config failed: open conf/chain.yaml" <<<"${logs}"; then

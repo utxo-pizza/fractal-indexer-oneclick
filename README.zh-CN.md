@@ -13,7 +13,7 @@ Fractald 节点，然后用交互式菜单部署官方 `fractal-indexer`、
 ## 它会部署什么
 
 - 官方 `fractalbitcoin/fractal-indexer` Docker 镜像和数据服务。
-- 官方 `fractalbitcoin/stake-indexer:v0.1.1` Docker 镜像。
+- 当前部署包固定的官方 `fractalbitcoin/stake-indexer:v0.2.0` Docker 镜像。
 - 可选官方 `fractalbitcoin/fractal-proof-publisher` dry-run 配置。
 - 运行时自动拉取/更新官方 `fractal-bitcoin/fractal-indexer-deploy`。
 - 官方 `fractal-indexer` 高度 `1753260` 快照恢复。
@@ -117,6 +117,9 @@ bash scripts/deploy-menu.sh --sync-official
 
 # 查看当前官方部署包版本
 bash scripts/deploy-menu.sh --official-status
+
+# 校验官方镜像和配置是否一致
+bash scripts/deploy-menu.sh --validate-official
 
 # 完整服务健康检查
 bash scripts/deploy-menu.sh --health
